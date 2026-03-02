@@ -2142,7 +2142,7 @@ footer {
   }
 
   .modal-hero {
-    height: 180px;
+    height: 240px;
   }
 
   .modal-overlay {
@@ -2160,17 +2160,17 @@ footer {
   }
 
   .modal-hero-overlay {
-    padding: 14px;
+    padding: 16px;
   }
 
   .modal-title {
-    font-size: 28px;
+    font-size: 32px;
     margin-bottom: 6px;
   }
 
   .modal-meta-row {
     gap: 10px;
-    font-size: 12px;
+    font-size: 13px;
   }
 
   .tab-panel.active {
