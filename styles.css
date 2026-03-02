@@ -1268,17 +1268,21 @@ nav a.active {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  filter: brightness(0.4);
+  filter: brightness(0.55);
 }
 
-.modal-hero-overlay {
+.modal-hero::after {
+  content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(to top, var(--bg-1) 0%, transparent 60%);
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  padding: clamp(18px, 2.4vw, 32px);
+  background: linear-gradient(to top, rgba(7, 11, 20, 0.88) 0%, rgba(7, 11, 20, 0.25) 48%, rgba(7, 11, 20, 0.1) 100%);
+  pointer-events: none;
+}
+
+.modal-head {
+  padding: clamp(16px, 2vw, 28px) clamp(16px, 2.2vw, 30px) 8px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(11, 20, 40, 0.92), rgba(11, 20, 40, 0.84));
 }
 
 .modal-tag-row {
@@ -1772,6 +1776,13 @@ nav a.active {
 
 .review-text.expanded {
   -webkit-line-clamp: unset;
+}
+
+.reviews-more-skeleton {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+  animation: fadeIn 0.2s ease;
 }
 
 .review-expand {
@@ -2452,8 +2463,8 @@ footer {
     padding: 12px 12px 18px;
   }
 
-  .modal-hero-overlay {
-    padding: 16px;
+  .modal-head {
+    padding: 14px 12px 8px;
   }
 
   .modal-title {

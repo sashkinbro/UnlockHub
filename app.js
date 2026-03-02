@@ -25,6 +25,10 @@ let currentProfileData = null;
 let achProfileEditMode = !currentProfileUrl;
 let profileEditMode = !currentProfileUrl;
 let profileSynced = false;
+const CACHE_TTL_MS = {
+  profile: 1000 * 60 * 60 * 6,
+  achievements: 1000 * 60 * 20,
+};
 
 /* ── DOM refs ──────────────────────────────────────────────── */
 const $ = id => document.getElementById(id);
@@ -368,24 +372,24 @@ function renderModal(g) {
     <div class="modal-hero">
       <img class="modal-hero-img" src="${g.background || g.header}" alt="${escHtml(g.name)}"
            onerror="this.src='${g.header}'">
-      <div class="modal-hero-overlay">
-        <div class="modal-tag-row">
-          ${(g.genres || []).slice(0, 3).map(gn => `<span class="pill pill-blue">${gn}</span>`).join('')}
-          ${g.is_free ? `<span class="pill pill-green">${i18n.t('game_free')}</span>` : ''}
-          ${g.metacritic ? `<span class="pill pill-purple">Metacritic ${g.metacritic.score}</span>` : ''}
-        </div>
-        <h2 class="modal-title">${escHtml(g.name)}</h2>
-        <div class="modal-meta-row">
-          ${g.developer ? `<span>👨‍💻 ${escHtml(g.developer)}</span>` : ''}
-          ${g.release ? `<span>📅 ${escHtml(g.release)}</span>` : ''}
-          ${g.price ? `<span>💰 ${g.price.formatted}</span>` : g.is_free ? `<span>🆓 ${i18n.t('game_free')}</span>` : ''}
-        </div>
-      </div>
       <button class="modal-close" onclick="closeModal()" aria-label="Close">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
         </svg>
       </button>
+    </div>
+    <div class="modal-head">
+      <div class="modal-tag-row">
+        ${(g.genres || []).slice(0, 3).map(gn => `<span class="pill pill-blue">${gn}</span>`).join('')}
+        ${g.is_free ? `<span class="pill pill-green">${i18n.t('game_free')}</span>` : ''}
+        ${g.metacritic ? `<span class="pill pill-purple">Metacritic ${g.metacritic.score}</span>` : ''}
+      </div>
+      <h2 class="modal-title">${escHtml(g.name)}</h2>
+      <div class="modal-meta-row">
+        ${g.developer ? `<span>👨‍💻 ${escHtml(g.developer)}</span>` : ''}
+        ${g.release ? `<span>📅 ${escHtml(g.release)}</span>` : ''}
+        ${g.price ? `<span>💰 ${g.price.formatted}</span>` : g.is_free ? `<span>🆓 ${i18n.t('game_free')}</span>` : ''}
+      </div>
     </div>
 
     <div class="modal-tabs" role="tablist">
@@ -566,8 +570,22 @@ function expandReview(id, btn) {
 
 async function loadMoreReviews(appid, cursor) {
   const btn = document.querySelector('#reviews-more-wrap .btn');
+  const list = document.querySelector('#reviews-body .reviews-list');
+  let skel = null;
+
   if (btn) btn.disabled = true;
-  await loadReviews(appid, cursor);
+  if (list) {
+    skel = document.createElement('div');
+    skel.className = 'reviews-more-skeleton';
+    skel.innerHTML = buildReviewSkeletonCards(2);
+    list.appendChild(skel);
+  }
+
+  try {
+    await loadReviews(appid, cursor);
+  } finally {
+    if (skel && skel.parentNode) skel.remove();
+  }
 }
 
 /* ── Achievements ──────────────────────────────────────────── */
@@ -595,10 +613,16 @@ async function loadAchievements(appid) {
   }
 
   if (!body) return;
-  body.innerHTML = skeletonMarkup('achievements');
+  const lang = i18n.lang;
+  const cacheKey = `uh_cache_ach_${appid}_${steamid || 'global'}_${lang}`;
+  const cached = cacheGet(cacheKey, CACHE_TTL_MS.achievements);
+  if (cached?.total) {
+    renderAchievementsData(body, cached, steamid);
+  } else {
+    body.innerHTML = skeletonMarkup('achievements');
+  }
 
   try {
-    const lang = i18n.lang;
     let data;
     try {
       data = await api(`/api/achievements?appid=${appid}&steamid=${steamid}&l=${lang}`);
@@ -612,51 +636,8 @@ async function loadAchievements(appid) {
       body.innerHTML = `<p style="color:var(--text-2);text-align:center;padding:40px">${i18n.t('ach_empty')}</p>`;
       return;
     }
-
-    const pct = data.percent;
-    const circumference = 2 * Math.PI * 35;
-    const offset = circumference - (pct / 100) * circumference;
-
-    body.innerHTML = `
-      <svg width="0" height="0"><defs>
-        <linearGradient id="achGrad" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#4f8ef7"/><stop offset="100%" stop-color="#7c4dff"/>
-        </linearGradient>
-      </defs></svg>
-      <div class="ach-header">
-        <div class="ach-progress-ring">
-          <svg width="80" height="80" viewBox="0 0 80 80">
-            <circle cx="40" cy="40" r="35" stroke-width="6" class="ring-bg"/>
-            <circle cx="40" cy="40" r="35" stroke-width="6" class="ring-fill"
-              stroke-dasharray="${circumference}"
-              stroke-dashoffset="${steamid ? offset : circumference}"/>
-          </svg>
-          <div class="ach-pct-text">${steamid ? pct + '%' : '—'}</div>
-        </div>
-        <div class="ach-counts">
-          ${steamid ? `<div><b>${data.unlocked}</b> / ${data.total}</div>
-          <div class="ach-counts" style="color:var(--text-2)">${i18n.t('ach_unlocked')}</div>
-          ${data.unlocked === 0 ? `<div style="font-size:12px;color:var(--text-3);max-width:260px;margin-top:4px">${i18n.t('ach_zero_hint')}</div>` : ''}` :
-        `<div><b>${data.total}</b></div>
-          <div class="ach-counts" style="color:var(--text-2)">${i18n.t('tab_achievements')}</div>
-          <div style="font-size:12px;color:var(--text-3);max-width:200px;margin-top:4px">${i18n.t('ach_enter_profile')}</div>`}
-        </div>
-      </div>
-      <div class="ach-list">
-        ${data.achievements.map(a => `
-        <div class="ach-item ${a.unlocked ? 'unlocked' : ''}">
-          <img class="ach-icon ${a.unlocked ? '' : 'gray'}" src="${a.unlocked ? a.icon : a.icon_gray}" alt="${escHtml(a.displayName)}"
-               onerror="this.src='${a.icon}'">
-          <div class="ach-info">
-            <div class="ach-name">${escHtml(a.displayName)}</div>
-            <div class="ach-desc">${a.hidden && !a.unlocked ? (i18n.lang === 'uk' ? 'Приховане досягнення' : 'Hidden achievement') : escHtml(a.description)}</div>
-          </div>
-          <div class="ach-right">
-            ${a.unlocked && a.unlock_time ? `<div class="ach-unlock-date">✅ ${new Date(a.unlock_time * 1000).toLocaleDateString()}</div>` :
-            !a.unlocked ? `<div class="ach-lock-icon">🔒</div><div class="ach-pct">${a.global_pct.toFixed(1)}%</div>` : ''}
-          </div>
-        </div>`).join('')}
-      </div>`;
+    cacheSet(cacheKey, data);
+    renderAchievementsData(body, data, steamid);
   } catch {
     if (body) body.innerHTML = `<p style="color:var(--text-2);text-align:center;padding:40px">${i18n.t('error_generic')}</p>`;
   }
@@ -716,18 +697,33 @@ function renderProfileInputControls() {
 
 async function loadProfile(url) {
   showProfileSection();
-  currentProfileUrl = url;
+  const normalizedUrl = normalizeProfileUrl(url);
+  currentProfileUrl = normalizedUrl;
   achProfileEditMode = false;
-  localStorage.setItem('uh_profile_url', url);
+  localStorage.setItem('uh_profile_url', normalizedUrl);
   renderProfileInputControls();
-  $('profile-header').innerHTML = skeletonMarkup('profile-header');
-  $('library-grid').innerHTML = skeletonMarkup('library-grid');
+  const profileCacheKey = `uh_cache_profile_${normalizedUrl}`;
+  const cachedProfile = cacheGet(profileCacheKey, CACHE_TTL_MS.profile);
+
+  if (cachedProfile?.steamid && cachedProfile?.games?.length) {
+    currentProfileSteamId = cachedProfile.steamid;
+    currentProfileData = cachedProfile;
+    profileSynced = true;
+    profileEditMode = false;
+    localStorage.setItem('uh_steamid', currentProfileSteamId);
+    renderProfileInputControls();
+    renderProfile(cachedProfile);
+  } else {
+    $('profile-header').innerHTML = skeletonMarkup('profile-header');
+    $('library-grid').innerHTML = skeletonMarkup('library-grid');
+  }
 
   try {
-    const data = await api(`/api/profile?url=${encodeURIComponent(url)}`);
+    const data = await api(`/api/profile?url=${encodeURIComponent(normalizedUrl)}`);
     currentProfileSteamId = data.steamid || '';
     if (currentProfileSteamId) localStorage.setItem('uh_steamid', currentProfileSteamId);
     currentProfileData = data;
+    cacheSet(profileCacheKey, data);
     profileSynced = true;
     profileEditMode = false;
     renderProfileInputControls();
@@ -1044,6 +1040,92 @@ function showLoading(containerId) {
     return;
   }
   el.innerHTML = skeletonMarkup('generic');
+}
+
+function normalizeProfileUrl(url) {
+  return String(url || '').trim().replace(/\/+$/, '');
+}
+
+function cacheSet(key, data) {
+  try {
+    localStorage.setItem(key, JSON.stringify({ ts: Date.now(), data }));
+  } catch { }
+}
+
+function cacheGet(key, maxAgeMs) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed.ts !== 'number') return null;
+    if (Date.now() - parsed.ts > maxAgeMs) return null;
+    return parsed.data || null;
+  } catch {
+    return null;
+  }
+}
+
+function buildReviewSkeletonCards(count = 2) {
+  return Array.from({ length: count }).map(() => `
+    <article class="review-skeleton-card">
+      <div class="review-skeleton-head">
+        <div class="skeleton skeleton-thumb"></div>
+        <div class="review-skeleton-meta">
+          <div class="skeleton skeleton-line skeleton-line-md"></div>
+          <div class="skeleton skeleton-line skeleton-line-sm"></div>
+        </div>
+      </div>
+      <div class="skeleton skeleton-line"></div>
+      <div class="skeleton skeleton-line"></div>
+      <div class="skeleton skeleton-line skeleton-line-md"></div>
+    </article>`).join('');
+}
+
+function renderAchievementsData(body, data, steamid) {
+  const pct = data.percent || 0;
+  const circumference = 2 * Math.PI * 35;
+  const offset = circumference - (pct / 100) * circumference;
+
+  body.innerHTML = `
+    <svg width="0" height="0"><defs>
+      <linearGradient id="achGrad" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#4f8ef7"/><stop offset="100%" stop-color="#7c4dff"/>
+      </linearGradient>
+    </defs></svg>
+    <div class="ach-header">
+      <div class="ach-progress-ring">
+        <svg width="80" height="80" viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="35" stroke-width="6" class="ring-bg"/>
+          <circle cx="40" cy="40" r="35" stroke-width="6" class="ring-fill"
+            stroke-dasharray="${circumference}"
+            stroke-dashoffset="${steamid ? offset : circumference}"/>
+        </svg>
+        <div class="ach-pct-text">${steamid ? pct + '%' : '—'}</div>
+      </div>
+      <div class="ach-counts">
+        ${steamid ? `<div><b>${data.unlocked}</b> / ${data.total}</div>
+        <div class="ach-counts" style="color:var(--text-2)">${i18n.t('ach_unlocked')}</div>
+        ${data.unlocked === 0 ? `<div style="font-size:12px;color:var(--text-3);max-width:260px;margin-top:4px">${i18n.t('ach_zero_hint')}</div>` : ''}` :
+      `<div><b>${data.total}</b></div>
+        <div class="ach-counts" style="color:var(--text-2)">${i18n.t('tab_achievements')}</div>
+        <div style="font-size:12px;color:var(--text-3);max-width:200px;margin-top:4px">${i18n.t('ach_enter_profile')}</div>`}
+      </div>
+    </div>
+    <div class="ach-list">
+      ${data.achievements.map(a => `
+      <div class="ach-item ${a.unlocked ? 'unlocked' : ''}">
+        <img class="ach-icon ${a.unlocked ? '' : 'gray'}" src="${a.unlocked ? a.icon : a.icon_gray}" alt="${escHtml(a.displayName)}"
+             onerror="this.src='${a.icon}'">
+        <div class="ach-info">
+          <div class="ach-name">${escHtml(a.displayName)}</div>
+          <div class="ach-desc">${a.hidden && !a.unlocked ? (i18n.lang === 'uk' ? 'Приховане досягнення' : 'Hidden achievement') : escHtml(a.description)}</div>
+        </div>
+        <div class="ach-right">
+          ${a.unlocked && a.unlock_time ? `<div class="ach-unlock-date">✅ ${new Date(a.unlock_time * 1000).toLocaleDateString()}</div>` :
+      !a.unlocked ? `<div class="ach-lock-icon">🔒</div><div class="ach-pct">${(Number(a.global_pct) || 0).toFixed(1)}%</div>` : ''}
+        </div>
+      </div>`).join('')}
+    </div>`;
 }
 
 function skeletonMarkup(type = 'generic') {
