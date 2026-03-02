@@ -135,15 +135,21 @@ function renderGameCards(games, container) {
     <div class="game-card" style="animation-delay:${i * 40}ms" onclick="openGameById('${g.appid}')">
       <div class="card-img-wrap">
         <img src="${g.cover}" alt="${escHtml(g.name)}" loading="lazy"
-             onerror="this.src='https://via.placeholder.com/460x215/0d1325/4f8ef7?text=No+Image'">
+             onerror="this.src='${g.fallback || 'https://via.placeholder.com/300x450/0d1325/4f8ef7?text=No+Image'}'">
         ${g.price?.discount ? `<span class="card-discount">-${g.price.discount}%</span>` : ''}
       </div>
       <div class="card-body">
         <div class="card-name" title="${escHtml(g.name)}">${escHtml(g.name)}</div>
         <div class="card-price">
-          ${!g.price ? `<span class="free">${i18n.t('game_free')}</span>` :
-      g.price.discount ? `<span class="price">${g.price.formatted}</span><span class="original">${formatCents(g.price.original)}</span>` :
-        `<span class="price">${g.price.formatted}</span>`}
+          ${!g.price
+      ? `<span class="free">${i18n.t('game_free')}</span>`
+      : g.price.formatted
+        ? (g.price.discount
+          ? `<span class="price">${g.price.formatted}</span><span class="original">${formatCents(g.price.original)}</span>`
+          : `<span class="price">${g.price.formatted}</span>`)
+        : g.price.final
+          ? `<span class="price">${(g.price.final / 100).toFixed(2)}&thinsp;€</span>`
+          : ''}
         </div>
       </div>
     </div>`).join('');
@@ -155,7 +161,7 @@ async function openGameById(appid) {
   showModalLoading();
 
   try {
-    const data = await api(`/api/game?id=${appid}&l=${i18n.lang === 'uk' ? 'russian' : 'english'}`);
+    const data = await api(`/api/game?id=${appid}&l=english`);
     currentGame = data;
     screenshots = data.screenshots || [];
     renderModal(data);
@@ -266,14 +272,18 @@ function renderModal(g) {
       <div class="tab-panel" id="tab-videos">
         ${(g.movies || []).length ? `
         <div class="videos-grid">
-          ${(g.movies || []).map(m => `
-            <div class="video-item" onclick="openVideo('${m.mp4_max || m.mp4_480 || m.webm_max}','${escHtml(m.name)}')">
+          ${(g.movies || []).map(m => {
+        // Prefer mp4, fallback to webm; both already have https:// from worker
+        const videoUrl = m.mp4_max || m.mp4_480 || m.webm_max || m.webm_480;
+        return `
+            <div class="video-item" onclick="openVideo('${videoUrl}','${escHtml(m.name)}')">
               <img src="${m.thumb}" alt="${escHtml(m.name)}" loading="lazy">
               <div class="video-play-btn">
                 <svg viewBox="0 0 80 80" fill="none"><circle cx="40" cy="40" r="39" stroke="white" stroke-opacity="0.3" stroke-width="2"/><circle cx="40" cy="40" r="39" fill="rgba(79,142,247,0.2)"/><path d="M33 28l22 12-22 12V28z" fill="white"/></svg>
               </div>
               <div class="video-name">${escHtml(m.name)}</div>
-            </div>`).join('')}
+            </div>`;
+      }).join('')}
         </div>` : `<div>${emptyState('media', i18n.t('no_videos'))}</div>`}
       </div>
 
@@ -432,7 +442,7 @@ async function loadAchievements(appid) {
                onerror="this.src='${a.icon}'">
           <div class="ach-info">
             <div class="ach-name">${escHtml(a.displayName)}</div>
-            <div class="ach-desc">${a.hidden && !a.unlocked ? 'Hidden achievement' : escHtml(a.description)}</div>
+            <div class="ach-desc">${a.hidden && !a.unlocked ? (i18n.lang === 'uk' ? 'Приховане досягнення' : 'Hidden achievement') : escHtml(a.description)}</div>
           </div>
           <div class="ach-right">
             ${a.unlocked && a.unlock_time ? `<div class="ach-unlock-date">✅ ${new Date(a.unlock_time * 1000).toLocaleDateString()}</div>` :

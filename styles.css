@@ -651,7 +651,7 @@ nav a.active {
 /* ── Game cards grid ────────────────────────────────────────── */
 .games-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 20px;
 }
 
@@ -678,7 +678,7 @@ nav a.active {
 .card-img-wrap {
   position: relative;
   overflow: hidden;
-  aspect-ratio: 460/215;
+  aspect-ratio: 3/4;
 }
 
 .card-img-wrap img {
@@ -926,7 +926,7 @@ nav a.active {
 .modal-box {
   position: relative;
   width: 100%;
-  max-width: 960px;
+  max-width: 1100px;
   margin: auto;
   background: var(--bg-1);
   border: 1px solid var(--border);
@@ -938,7 +938,7 @@ nav a.active {
 
 .modal-hero {
   position: relative;
-  height: 320px;
+  height: 360px;
   overflow: hidden;
   background: var(--bg-2);
 }
@@ -1779,7 +1779,7 @@ footer {
   }
 
   .modal-hero {
-    height: 200px;
+    height: 220px;
   }
 
   .modal-title {
@@ -1790,9 +1790,17 @@ footer {
     padding: 16px;
   }
 
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+
   .games-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+  }
+
+  .library-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   }
 
   .profile-header {
@@ -1806,6 +1814,38 @@ footer {
 
   .lightbox-nav {
     display: none;
+  }
+
+  .search-box {
+    padding: 6px 6px 6px 14px;
+  }
+
+  .modal-tabs {
+    padding: 12px 16px 0;
+  }
+
+  .tab-btn {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .ach-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .reviews-header {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .videos-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .screenshots-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   }
 }
 
@@ -1823,7 +1863,29 @@ footer {
   }
 
   .tab-btn {
-    padding: 8px 12px;
-    font-size: 13px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .modal-hero {
+    height: 180px;
+  }
+
+  .modal-overlay {
+    padding: 0;
+  }
+
+  .modal-box {
+    border-radius: 0;
+    min-height: 100vh;
+  }
+
+  .profile-header {
+    padding: 16px;
+  }
+
+  .ach-profile-bar {
+    flex-direction: column;
+    align-items: stretch;
   }
 }
