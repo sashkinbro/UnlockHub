@@ -371,6 +371,7 @@ function renderModal(g) {
   $('modal-box').innerHTML = `
     <div class="modal-hero">
       <img class="modal-hero-img" src="${g.background || g.header}" alt="${escHtml(g.name)}"
+           onload="setModalHeroAspect(this)"
            onerror="this.src='${g.header}'">
       <button class="modal-close" onclick="closeModal()" aria-label="Close">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -479,6 +480,15 @@ function renderModal(g) {
   loadReviews(g.appid);
   loadAchievements(g.appid);
   currentAchAppId = String(g.appid);
+}
+
+function setModalHeroAspect(img) {
+  const hero = img?.closest('.modal-hero');
+  if (!hero) return;
+  const w = Number(img.naturalWidth) || 0;
+  const h = Number(img.naturalHeight) || 0;
+  if (!w || !h) return;
+  hero.style.setProperty('--hero-ratio', `${w} / ${h}`);
 }
 
 function infoRow(label, value) {
