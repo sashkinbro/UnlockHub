@@ -706,8 +706,14 @@ nav a.active {
 }
 
 .top-games-grid {
-  grid-template-columns: repeat(auto-fill, minmax(165px, 165px));
+  display: flex;
+  flex-wrap: wrap;
   justify-content: center;
+  gap: 20px;
+}
+
+.top-games-grid .game-card {
+  width: 165px;
 }
 
 .card-img-wrap.addon {
@@ -1065,6 +1071,7 @@ nav a.active {
 .modal-tabs {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   padding: 14px clamp(16px, 2.2vw, 30px) 0;
   border-bottom: 1px solid var(--border);
@@ -1783,6 +1790,16 @@ nav a.active {
   align-items: center;
   gap: 16px;
   padding: 60px;
+  width: 100%;
+  justify-self: center;
+}
+
+.games-grid>.loading-center,
+.library-grid>.loading-center,
+.top-games-grid>.loading-center,
+#reviews-body>.loading-center,
+#ach-body>.loading-center {
+  grid-column: 1 / -1;
 }
 
 .loading-center p {
@@ -1945,6 +1962,7 @@ footer {
   }
 
   .modal-tabs {
+    justify-content: flex-start;
     padding: 12px 16px 0;
   }
 
@@ -1970,6 +1988,10 @@ footer {
 
   .screenshots-grid {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+
+  .top-games-grid .game-card {
+    width: 154px;
   }
 
   .header-actions {

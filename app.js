@@ -10,7 +10,8 @@ const WORKER_URL = 'https://achievement.sashabro1997.workers.dev';
 let currentGame = null;
 let screenshots = [];
 let lightboxIndex = 0;
-let currentProfileSteamId = '';
+let currentProfileSteamId = localStorage.getItem('uh_steamid') || '';
+let currentProfileUrl = localStorage.getItem('uh_profile_url') || '';
 let currentAchAppId = '';
 let reviewCursor = '*';
 let reviewsLoaded = false;
@@ -19,6 +20,7 @@ let topGamesCache = [];
 let topGamesUpdatedAt = 0;
 let topGamesTotal = 0;
 let topGamesLoading = false;
+let suppressVideoErrorToast = false;
 
 /* ── DOM refs ──────────────────────────────────────────────── */
 const $ = id => document.getElementById(id);
@@ -207,7 +209,7 @@ function renderTopGames(games, updatedAt = 0) {
   $('top-games-count').textContent = games.length;
   if (updatedAt) {
     const dt = new Date(updatedAt * 1000);
-    $('top-games-updated').textContent = `${i18n.t('top_games_updated')}: ${dt.toLocaleString()}`;
+    $('top-games-updated').textContent = `${i18n.t('top_games_updated')}: ${dt.toLocaleDateString()}`;
   } else {
     $('top-games-updated').textContent = i18n.t('top_games_subtitle');
   }
@@ -409,7 +411,7 @@ function renderModal(g) {
       <!-- ACHIEVEMENTS -->
       <div class="tab-panel" id="tab-achievements">
         <div class="ach-profile-bar">
-          <input class="ach-profile-input" id="ach-profile-input" placeholder="${i18n.t('profile_placeholder')}" type="url">
+          <input class="ach-profile-input" id="ach-profile-input" placeholder="${i18n.t('profile_placeholder')}" type="url" value="${escHtml(currentProfileUrl)}">
           <button class="btn btn-primary btn-sm" onclick="loadAchievements('${g.appid}')">${i18n.t('btn_sync')}</button>
         </div>
         <div id="ach-body">
@@ -511,15 +513,22 @@ async function loadMoreReviews(appid, cursor) {
 async function loadAchievements(appid) {
   const body = $('ach-body');
   const inp = $('ach-profile-input');
-  const profileUrl = inp ? inp.value.trim() : '';
+  let profileUrl = inp ? inp.value.trim() : '';
+  if (!profileUrl && currentProfileUrl) {
+    profileUrl = currentProfileUrl;
+    if (inp) inp.value = currentProfileUrl;
+  }
   let steamid = currentProfileSteamId;
 
   if (profileUrl && profileUrl.includes('steamcommunity.com')) {
+    currentProfileUrl = profileUrl;
+    localStorage.setItem('uh_profile_url', profileUrl);
     // resolve steamid inline from worker
     try {
       const pd = await api(`/api/profile?url=${encodeURIComponent(profileUrl)}`);
       steamid = pd.steamid || '';
       currentProfileSteamId = steamid;
+      localStorage.setItem('uh_steamid', steamid);
     } catch { }
   }
 
@@ -595,6 +604,7 @@ function setupProfileSection() {
   const btn = $('profile-sync-btn');
   const inp = $('profile-url-input');
   if (!btn || !inp) return;
+  if (currentProfileUrl) inp.value = currentProfileUrl;
   btn.addEventListener('click', () => {
     const url = inp.value.trim();
     if (url) loadProfile(url);
@@ -605,12 +615,15 @@ function setupProfileSection() {
 async function loadProfile(url) {
   showProfileSection();
   $('profile-url-input').value = url;
+  currentProfileUrl = url;
+  localStorage.setItem('uh_profile_url', url);
   $('profile-header').innerHTML = `<div class="loading-center"><div class="spinner"></div></div>`;
   $('library-grid').innerHTML = '';
 
   try {
     const data = await api(`/api/profile?url=${encodeURIComponent(url)}`);
     currentProfileSteamId = data.steamid || '';
+    if (currentProfileSteamId) localStorage.setItem('uh_steamid', currentProfileSteamId);
     renderProfile(data);
   } catch (e) {
     $('profile-header').innerHTML = `<div class="loading-center">${emptyState('error', i18n.t('profile_private'))}</div>`;
@@ -695,6 +708,7 @@ function setupVideoModal() {
   $('video-modal').addEventListener('click', e => { if (e.target === $('video-modal')) closeVideoModal(); });
   const player = $('video-player');
   player.addEventListener('error', () => {
+    if (suppressVideoErrorToast) return;
     showToast(i18n.lang === 'uk' ? 'Не вдалося завантажити відео' : 'Failed to load video', 'error');
   });
 }
@@ -735,6 +749,7 @@ function destroyHlsPlayer() {
 
 async function openVideo(url, name, streamType = 'file') {
   if (!url) return;
+  suppressVideoErrorToast = false;
   const player = $('video-player');
   destroyHlsPlayer();
   player.pause();
@@ -775,11 +790,13 @@ async function openVideo(url, name, streamType = 'file') {
 
 function closeVideoModal() {
   const player = $('video-player');
+  suppressVideoErrorToast = true;
   destroyHlsPlayer();
   player.pause();
   player.src = '';
   $('video-modal').classList.add('hidden');
   document.body.style.overflow = '';
+  setTimeout(() => { suppressVideoErrorToast = false; }, 300);
 }
 
 /* ── Particles ──────────────────────────────────────────────── */
