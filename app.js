@@ -201,6 +201,10 @@ function renderModal(g) {
   const pct = g.review_summary?.total_reviews
     ? Math.round(g.review_summary.total_positive / g.review_summary.total_reviews * 100) : null;
   const scoreClass = pct >= 70 ? 'pos' : pct >= 40 ? 'mix' : 'neg';
+  const moviesWithUrl = (g.movies || []).map(m => {
+    const videoUrl = m.mp4_max || m.mp4_480 || m.webm_max || m.webm_480 || '';
+    return { ...m, videoUrl };
+  }).filter(m => m.videoUrl);
 
   $('modal-box').innerHTML = `
     <div class="modal-hero">
@@ -275,13 +279,10 @@ function renderModal(g) {
 
       <!-- VIDEOS -->
       <div class="tab-panel" id="tab-videos">
-        ${(g.movies || []).length ? `
+        ${moviesWithUrl.length ? `
         <div class="videos-grid">
-          ${(g.movies || []).map(m => {
-        // Prefer mp4, fallback to webm; both already have https:// from worker
-        const videoUrl = m.mp4_max || m.mp4_480 || m.webm_max || m.webm_480;
-        if (!videoUrl) return '';
-        const encodedUrl = encodeURIComponent(videoUrl);
+          ${moviesWithUrl.map(m => {
+        const encodedUrl = encodeURIComponent(m.videoUrl);
         const encodedName = encodeURIComponent(m.name || 'Trailer');
         return `
             <div class="video-item" onclick="openVideoByEncoded('${encodedUrl}','${encodedName}')">
@@ -408,7 +409,14 @@ async function loadAchievements(appid) {
 
   try {
     const lang = i18n.lang;
-    const data = await api(`/api/achievements?appid=${appid}&steamid=${steamid}&l=${lang}`);
+    let data;
+    try {
+      data = await api(`/api/achievements?appid=${appid}&steamid=${steamid}&l=${lang}`);
+    } catch (e) {
+      if (!steamid) throw e;
+      // If profile achievements fail (private profile / invalid steamid), fallback to global achievements.
+      data = await api(`/api/achievements?appid=${appid}&l=${lang}`);
+    }
 
     if (!data.total) {
       body.innerHTML = `<p style="color:var(--text-2);text-align:center;padding:40px">${i18n.t('ach_empty')}</p>`;
@@ -566,7 +574,11 @@ function setupVideoModal() {
 }
 
 function openVideoByEncoded(encodedUrl, encodedName) {
-  openVideo(decodeURIComponent(encodedUrl), decodeURIComponent(encodedName));
+  try {
+    openVideo(decodeURIComponent(encodedUrl), decodeURIComponent(encodedName));
+  } catch {
+    openVideo(encodedUrl, encodedName);
+  }
 }
 
 function openVideo(url, name) {

@@ -962,7 +962,7 @@ nav a.active {
   overflow: hidden;
   animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   box-shadow: var(--shadow-lg);
-  max-height: calc(100vh - 40px);
+  max-height: min(94vh, 1100px);
   display: flex;
   flex-direction: column;
 }
@@ -972,6 +972,7 @@ nav a.active {
   height: 360px;
   overflow: hidden;
   background: var(--bg-2);
+  flex-shrink: 0;
 }
 
 .modal-hero-img {
@@ -1048,6 +1049,7 @@ nav a.active {
   padding: 16px 24px 0;
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
+  flex-shrink: 0;
 }
 
 .tab-btn {
@@ -1075,8 +1077,9 @@ nav a.active {
 
 .modal-body {
   padding: 28px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  max-height: calc(100vh - 520px);
 }
 
 .tab-panel {
@@ -1830,7 +1833,6 @@ footer {
 
   .modal-body {
     padding: 16px;
-    max-height: calc(100vh - 360px);
   }
 
   .overview-grid {
@@ -1920,12 +1922,12 @@ footer {
 
   .modal-box {
     border-radius: 0;
-    min-height: 100vh;
-    max-height: 100vh;
+    min-height: 100dvh;
+    max-height: 100dvh;
   }
 
   .modal-body {
-    max-height: calc(100vh - 300px);
+    padding-bottom: 20px;
   }
 
   .video-modal video,
