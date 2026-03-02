@@ -346,6 +346,14 @@ input {
   width: 165px;
 }
 
+.top-card-skeleton .skeleton-media {
+  aspect-ratio: 2/3;
+}
+
+.top-games-more-skeleton-item {
+  pointer-events: none;
+}
+
 .profile-header-skeleton {
   display: flex;
   align-items: center;
@@ -620,13 +628,15 @@ nav a.active {
 .lang-btn {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 7px 14px;
-  border-radius: var(--radius-sm);
+  justify-content: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 12px;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-2);
-  background: var(--bg-glass);
+  background: rgba(15, 26, 47, 0.85);
   border: 1px solid var(--border);
   transition: all var(--transition);
 }
@@ -634,10 +644,24 @@ nav a.active {
 .lang-btn:hover {
   color: var(--text-1);
   border-color: var(--border-hl);
+  background: rgba(19, 34, 63, 0.95);
 }
 
 .lang-btn .flag {
-  font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(79, 142, 247, 0.18);
+  color: #d6e7ff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.35px;
+  line-height: 1;
 }
 
 .mobile-menu-btn {
@@ -2553,11 +2577,10 @@ footer {
   }
 
   .lang-btn {
-    width: 136px;
-    max-width: 136px;
+    width: auto;
+    max-width: 170px;
     padding: 6px 10px;
     gap: 6px;
-    justify-content: flex-start;
     flex-shrink: 0;
   }
 

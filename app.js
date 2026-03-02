@@ -61,11 +61,18 @@ function setupHeader() {
 /* ── Language button ───────────────────────────────────────── */
 function setupLangBtn() {
   const btn = $('lang-btn');
+  if (!btn) return;
+
+  const refreshLangBtn = () => {
+    btn.querySelector('.lang-label').textContent = i18n.t('lang_switch');
+    btn.querySelector('.flag').textContent = i18n.lang === 'uk' ? 'UA' : 'EN';
+  };
+
+  refreshLangBtn();
   btn.addEventListener('click', () => {
     const next = i18n.lang === 'en' ? 'uk' : 'en';
     i18n.setLang(next);
-    btn.querySelector('.lang-label').textContent = i18n.t('lang_switch');
-    btn.querySelector('.flag').textContent = next === 'uk' ? '🇺🇦' : '🇬🇧';
+    refreshLangBtn();
     if (topGamesCache.length) renderTopGames(topGamesCache, topGamesUpdatedAt);
     if (currentProfileData) renderProfile(currentProfileData);
     renderProfileInputControls();
@@ -212,15 +219,24 @@ async function loadMoreTopGames() {
   if (topGamesLoading) return;
   if (topGamesTotal && topGamesCache.length >= topGamesTotal) return;
 
+  const offset = topGamesCache.length;
   topGamesLoading = true;
   updateTopGamesMoreBtn(true);
+  showTopGamesMoreSkeleton();
   try {
-    const data = await api(`/api/top-games?limit=25&offset=${topGamesCache.length}`);
+    const data = await api(`/api/top-games?limit=25&offset=${offset}`);
     const incoming = data.games || [];
     topGamesTotal = data.total || topGamesTotal || (topGamesCache.length + incoming.length);
-    topGamesCache = topGamesCache.concat(incoming);
-    renderTopGames(topGamesCache, topGamesUpdatedAt || data.updated_at || 0);
+    topGamesUpdatedAt = topGamesUpdatedAt || data.updated_at || 0;
+    clearTopGamesMoreSkeleton();
+
+    if (incoming.length) {
+      topGamesCache = topGamesCache.concat(incoming);
+      appendTopGames(incoming, offset);
+    }
+    updateTopGamesHeader(topGamesCache.length, topGamesUpdatedAt);
   } catch {
+    clearTopGamesMoreSkeleton();
     showToast(i18n.t('error_generic'), 'error');
   } finally {
     topGamesLoading = false;
@@ -243,21 +259,18 @@ function renderTopGames(games, updatedAt = 0) {
   if (!grid) return;
   if (!games.length) {
     grid.innerHTML = emptyState('media', i18n.t('top_games_empty'));
-    $('top-games-count').textContent = '0';
-    $('top-games-updated').textContent = i18n.t('top_games_subtitle');
+    updateTopGamesHeader(0, 0);
     updateTopGamesMoreBtn();
     return;
   }
 
-  $('top-games-count').textContent = games.length;
-  if (updatedAt) {
-    const dt = new Date(updatedAt * 1000);
-    $('top-games-updated').textContent = `${i18n.t('top_games_updated')}: ${dt.toLocaleDateString()}`;
-  } else {
-    $('top-games-updated').textContent = i18n.t('top_games_subtitle');
-  }
+  updateTopGamesHeader(games.length, updatedAt);
+  grid.innerHTML = games.map((g, i) => topGameCardMarkup(g, i)).join('');
+  updateTopGamesMoreBtn();
+}
 
-  grid.innerHTML = games.map((g, i) => `
+function topGameCardMarkup(g, i) {
+  return `
     <div class="game-card" style="animation-delay:${i * 25}ms" onclick="openGameById('${g.appid}')">
       <div class="card-img-wrap">
         <img src="${g.cover}" alt="${escHtml(g.name)}" loading="lazy"
@@ -273,7 +286,41 @@ function renderTopGames(games, updatedAt = 0) {
           <span class="original" style="text-decoration:none">${i18n.t('top_games_players')}</span>
         </div>
       </div>
-    </div>`).join('');
+    </div>`;
+}
+
+function appendTopGames(games, startIndex = 0) {
+  const grid = $('top-games-grid');
+  if (!grid || !games.length) return;
+  grid.insertAdjacentHTML('beforeend', games.map((g, i) => topGameCardMarkup(g, startIndex + i)).join(''));
+}
+
+function updateTopGamesHeader(count, updatedAt = 0) {
+  $('top-games-count').textContent = String(count || 0);
+  if (updatedAt) {
+    const dt = new Date(updatedAt * 1000);
+    $('top-games-updated').textContent = `${i18n.t('top_games_updated')}: ${dt.toLocaleDateString()}`;
+    return;
+  }
+  $('top-games-updated').textContent = i18n.t('top_games_subtitle');
+}
+
+function showTopGamesMoreSkeleton(count = 6) {
+  const grid = $('top-games-grid');
+  if (!grid) return;
+  const cards = Array.from({ length: count }, () => `
+    <article class="skeleton-card top-card-skeleton top-games-more-skeleton-item" aria-hidden="true">
+      <div class="skeleton skeleton-media"></div>
+      <div class="skeleton-card-body">
+        <div class="skeleton skeleton-line skeleton-line-lg"></div>
+        <div class="skeleton skeleton-line skeleton-line-sm"></div>
+      </div>
+    </article>`).join('');
+  grid.insertAdjacentHTML('beforeend', cards);
+}
+
+function clearTopGamesMoreSkeleton() {
+  document.querySelectorAll('.top-games-more-skeleton-item').forEach(el => el.remove());
   updateTopGamesMoreBtn();
 }
 
