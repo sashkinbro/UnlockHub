@@ -15,6 +15,8 @@ let currentAchAppId = '';
 let reviewCursor = '*';
 let reviewsLoaded = false;
 let hlsPlayer = null;
+let topGamesCache = [];
+let topGamesUpdatedAt = 0;
 
 /* ── DOM refs ──────────────────────────────────────────────── */
 const $ = id => document.getElementById(id);
@@ -32,6 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupVideoModal();
   setupProfileSection();
   prefillHints();
+  loadTopGames();
 });
 
 /* ── Header scroll effect ──────────────────────────────────── */
@@ -50,6 +53,7 @@ function setupLangBtn() {
     i18n.setLang(next);
     btn.querySelector('.lang-label').textContent = i18n.t('lang_switch');
     btn.querySelector('.flag').textContent = next === 'uk' ? '🇺🇦' : '🇬🇧';
+    if (topGamesCache.length) renderTopGames(topGamesCache, topGamesUpdatedAt);
   });
 }
 
@@ -111,6 +115,7 @@ async function doSearch(query) {
 /* ── Sections ──────────────────────────────────────────────── */
 function showHero() {
   $('hero').classList.remove('hidden');
+  $('top-live-section').classList.remove('hidden');
   $('results-section').classList.add('hidden');
   $('profile-section').classList.add('hidden');
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -118,6 +123,7 @@ function showHero() {
 
 function showResultsSection() {
   $('hero').classList.add('hidden');
+  $('top-live-section').classList.add('hidden');
   $('results-section').classList.remove('hidden');
   $('profile-section').classList.add('hidden');
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -125,9 +131,60 @@ function showResultsSection() {
 
 function showProfileSection() {
   $('hero').classList.add('hidden');
+  $('top-live-section').classList.add('hidden');
   $('results-section').classList.add('hidden');
   $('profile-section').classList.remove('hidden');
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+async function loadTopGames() {
+  const grid = $('top-games-grid');
+  if (!grid) return;
+  showLoading('top-games-grid');
+  try {
+    const data = await api('/api/top-games?limit=20');
+    topGamesCache = data.games || [];
+    topGamesUpdatedAt = data.updated_at || 0;
+    renderTopGames(topGamesCache, topGamesUpdatedAt);
+  } catch {
+    grid.innerHTML = emptyState('media', i18n.t('top_games_empty'));
+    $('top-games-count').textContent = '0';
+  }
+}
+
+function renderTopGames(games, updatedAt = 0) {
+  const grid = $('top-games-grid');
+  if (!grid) return;
+  if (!games.length) {
+    grid.innerHTML = emptyState('media', i18n.t('top_games_empty'));
+    $('top-games-count').textContent = '0';
+    $('top-games-updated').textContent = i18n.t('top_games_subtitle');
+    return;
+  }
+
+  $('top-games-count').textContent = games.length;
+  if (updatedAt) {
+    const dt = new Date(updatedAt * 1000);
+    $('top-games-updated').textContent = `${i18n.t('top_games_updated')}: ${dt.toLocaleString()}`;
+  } else {
+    $('top-games-updated').textContent = i18n.t('top_games_subtitle');
+  }
+
+  grid.innerHTML = games.map((g, i) => `
+    <div class="game-card" style="animation-delay:${i * 25}ms" onclick="openGameById('${g.appid}')">
+      <div class="card-img-wrap">
+        <img src="${g.cover}" alt="${escHtml(g.name)}" loading="lazy"
+             onerror="this.src='${g.fallback || 'https://via.placeholder.com/300x450/0d1325/4f8ef7?text=No+Image'}'">
+        <span class="card-addon">#${g.rank}</span>
+      </div>
+      <div class="card-body">
+        <div class="card-name" title="${escHtml(g.name)}">${escHtml(g.name)}</div>
+        <div class="card-price">
+          <span class="price">${(g.peak_in_game || 0).toLocaleString()}</span>
+          <span class="original" style="text-decoration:none">${i18n.t('top_games_players')}</span>
+        </div>
+      </div>
+    </div>`).join('');
 }
 
 /* ── Render game cards ─────────────────────────────────────── */
@@ -257,8 +314,8 @@ function renderModal(g) {
               ${infoRow(i18n.t('game_publisher'), g.publisher)}
               ${infoRow(i18n.t('game_release'), g.release)}
               ${infoRow(i18n.t('game_price'), g.is_free ? i18n.t('game_free') : g.price?.formatted)}
-              ${g.platforms ? infoRow('Platforms', [g.platforms.windows ? 'Win' : '', g.platforms.mac ? 'Mac' : '', g.platforms.linux ? 'Linux' : ''].filter(Boolean).join(', ')) : ''}
-              ${g.website ? `<div class="info-row"><span class="label">${i18n.t('game_developer')} Site</span><a href="${g.website}" target="_blank" class="value" style="color:var(--blue)">Link →</a></div>` : ''}
+              ${g.platforms ? infoRow(i18n.t('game_platforms'), [g.platforms.windows ? 'Win' : '', g.platforms.mac ? 'Mac' : '', g.platforms.linux ? 'Linux' : ''].filter(Boolean).join(', ')) : ''}
+              ${g.website ? `<div class="info-row"><span class="label">${i18n.t('game_website')}</span><a href="${g.website}" target="_blank" class="value" style="color:var(--blue)">Link →</a></div>` : ''}
             </div>
             <a href="https://store.steampowered.com/app/${g.appid}" target="_blank" class="btn btn-primary btn-lg" style="width:100%;justify-content:center">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2z"/></svg>
@@ -368,7 +425,7 @@ async function loadReviews(appid, cursor = '*') {
         <div class="review-text" id="rev-${r.id}" style="display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden">
           ${escHtml(r.text)}
         </div>
-        ${r.text.length > 200 ? `<div class="review-expand" onclick="expandReview('rev-${r.id}',this)">${i18n.t('btn_next') === 'Load more' ? 'Show more' : 'Більше'}</div>` : ''}
+        ${r.text.length > 200 ? `<div class="review-expand" onclick="expandReview('rev-${r.id}',this)">${i18n.t('btn_show_more')}</div>` : ''}
       </div>`).join('');
 
     const canLoadMore = data.cursor && data.cursor !== '*' && reviews.length === 10;
@@ -518,7 +575,14 @@ async function loadProfile(url) {
 }
 
 function renderProfile(d) {
-  const statusLabel = ['Offline', 'Online', 'Busy', 'Away', 'Snooze', '', '', ''][d.status] || '';
+  const statusMap = {
+    0: i18n.t('profile_status_offline'),
+    1: i18n.t('profile_status_online'),
+    2: i18n.t('profile_status_busy'),
+    3: i18n.t('profile_status_away'),
+    4: i18n.t('profile_status_snooze'),
+  };
+  const statusLabel = statusMap[d.status] || '';
   $('profile-header').innerHTML = `
     <div class="profile-avatar"><img src="${d.avatar}" alt="${escHtml(d.name)}"></div>
     <div class="profile-info">
@@ -526,7 +590,7 @@ function renderProfile(d) {
       <div class="profile-stats">
         <div class="profile-stat"><span class="profile-stat-val">${d.game_count}</span><span class="profile-stat-lbl">${i18n.t('profile_games')}</span></div>
         <div class="profile-stat"><span class="profile-stat-val">${d.total_hours.toLocaleString()}</span><span class="profile-stat-lbl">${i18n.t('profile_hours')}</span></div>
-        ${d.country ? `<div class="profile-stat"><span class="profile-stat-val">${d.country}</span><span class="profile-stat-lbl">Country</span></div>` : ''}
+        ${d.country ? `<div class="profile-stat"><span class="profile-stat-val">${d.country}</span><span class="profile-stat-lbl">${i18n.t('profile_country')}</span></div>` : ''}
       </div>
     </div>
     <a href="${d.profile_url}" target="_blank" class="btn btn-ghost btn-sm" style="margin-left:auto">${i18n.t('btn_view_steam')} →</a>`;
