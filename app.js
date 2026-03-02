@@ -23,6 +23,8 @@ let topGamesLoading = false;
 let suppressVideoErrorToast = false;
 let currentProfileData = null;
 let achProfileEditMode = !currentProfileUrl;
+let profileEditMode = !currentProfileUrl;
+let profileSynced = false;
 
 /* ── DOM refs ──────────────────────────────────────────────── */
 const $ = id => document.getElementById(id);
@@ -62,6 +64,7 @@ function setupLangBtn() {
     btn.querySelector('.flag').textContent = next === 'uk' ? '🇺🇦' : '🇬🇧';
     if (topGamesCache.length) renderTopGames(topGamesCache, topGamesUpdatedAt);
     if (currentProfileData) renderProfile(currentProfileData);
+    renderProfileInputControls();
     updateTopGamesMoreBtn();
   });
 }
@@ -651,23 +654,62 @@ async function loadAchievements(appid) {
 
 /* ── Profile ────────────────────────────────────────────────── */
 function setupProfileSection() {
-  const btn = $('profile-sync-btn');
-  const inp = $('profile-url-input');
-  if (!btn || !inp) return;
-  if (currentProfileUrl) inp.value = currentProfileUrl;
-  btn.addEventListener('click', () => {
+  const wrap = document.querySelector('.profile-input-wrap');
+  if (!wrap) return;
+
+  renderProfileInputControls();
+
+  wrap.addEventListener('click', e => {
+    const syncBtn = e.target.closest('#profile-sync-btn');
+    const changeBtn = e.target.closest('#profile-change-btn');
+    if (changeBtn) {
+      profileEditMode = true;
+      renderProfileInputControls();
+      return;
+    }
+    if (syncBtn) {
+      const inp = $('profile-url-input');
+      const url = inp ? inp.value.trim() : currentProfileUrl;
+      if (url) loadProfile(url);
+    }
+  });
+
+  wrap.addEventListener('keydown', e => {
+    if (e.key !== 'Enter') return;
+    const inp = e.target.closest('#profile-url-input');
+    if (!inp) return;
     const url = inp.value.trim();
     if (url) loadProfile(url);
   });
-  inp.addEventListener('keydown', e => { if (e.key === 'Enter') { const url = inp.value.trim(); if (url) loadProfile(url); } });
+}
+
+function renderProfileInputControls() {
+  const wrap = document.querySelector('.profile-input-wrap');
+  if (!wrap) return;
+
+  if (profileSynced && !profileEditMode && currentProfileUrl) {
+    wrap.innerHTML = `
+      <div class="profile-saved">
+        <div class="profile-saved-lbl">${i18n.t('profile_connected')}</div>
+        <div class="profile-saved-url">${escHtml(currentProfileUrl)}</div>
+      </div>
+      <button class="btn btn-ghost" id="profile-change-btn">${i18n.t('profile_change')}</button>
+      <button class="btn btn-primary" id="profile-sync-btn">${i18n.t('btn_sync')}</button>`;
+  } else {
+    wrap.innerHTML = `
+      <input id="profile-url-input" class="profile-input" type="url"
+             placeholder="${escHtml(i18n.t('profile_placeholder'))}"
+             value="${escHtml(currentProfileUrl)}">
+      <button class="btn btn-primary" id="profile-sync-btn">${i18n.t('btn_sync')}</button>`;
+  }
 }
 
 async function loadProfile(url) {
   showProfileSection();
-  $('profile-url-input').value = url;
   currentProfileUrl = url;
   achProfileEditMode = false;
   localStorage.setItem('uh_profile_url', url);
+  renderProfileInputControls();
   $('profile-header').innerHTML = `<div class="loading-center"><div class="spinner"></div></div>`;
   $('library-grid').innerHTML = '';
 
@@ -676,8 +718,14 @@ async function loadProfile(url) {
     currentProfileSteamId = data.steamid || '';
     if (currentProfileSteamId) localStorage.setItem('uh_steamid', currentProfileSteamId);
     currentProfileData = data;
+    profileSynced = true;
+    profileEditMode = false;
+    renderProfileInputControls();
     renderProfile(data);
   } catch (e) {
+    profileSynced = false;
+    profileEditMode = true;
+    renderProfileInputControls();
     $('profile-header').innerHTML = `<div class="loading-center">${emptyState('error', i18n.t('profile_private'))}</div>`;
   }
 }

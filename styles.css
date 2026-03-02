@@ -947,6 +947,29 @@ nav a.active {
   box-shadow: 0 0 0 3px rgba(79, 142, 247, 0.12);
 }
 
+.profile-saved {
+  flex: 1;
+  min-width: 0;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  background: var(--bg-card);
+}
+
+.profile-saved-lbl {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-bottom: 2px;
+}
+
+.profile-saved-url {
+  font-size: 14px;
+  color: var(--text-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Library grid */
 .library-grid {
   display: grid;
