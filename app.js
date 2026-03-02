@@ -261,7 +261,9 @@ function renderTopGames(games, updatedAt = 0) {
     <div class="game-card" style="animation-delay:${i * 25}ms" onclick="openGameById('${g.appid}')">
       <div class="card-img-wrap">
         <img src="${g.cover}" alt="${escHtml(g.name)}" loading="lazy"
-             onerror="this.src='${g.fallback || 'https://via.placeholder.com/300x450/0d1325/4f8ef7?text=No+Image'}'">
+             data-fallback="${g.fallback || ''}"
+             data-fallback2="${g.fallback2 || ''}"
+             onerror="handleCardImageError(this)">
         <span class="card-addon">#${g.rank}</span>
       </div>
       <div class="card-body">
@@ -285,7 +287,9 @@ function renderGameCards(games, container) {
     <div class="game-card" style="animation-delay:${i * 40}ms" onclick="openGameById('${g.appid}')">
       <div class="card-img-wrap${g.is_main_game === false ? ' addon' : ''}">
         <img src="${g.cover}" alt="${escHtml(g.name)}" loading="lazy"
-             onerror="this.src='${g.fallback || 'https://via.placeholder.com/300x450/0d1325/4f8ef7?text=No+Image'}'">
+             data-fallback="${g.fallback || ''}"
+             data-fallback2="${g.fallback2 || ''}"
+             onerror="handleCardImageError(this)">
         ${g.is_main_game === false ? `<span class="card-addon">DLC / Add-on</span>` : ''}
         ${g.price?.discount ? `<span class="card-discount">-${g.price.discount}%</span>` : ''}
       </div>
@@ -371,7 +375,6 @@ function renderModal(g) {
   $('modal-box').innerHTML = `
     <div class="modal-hero">
       <img class="modal-hero-img" src="${g.background || g.header}" alt="${escHtml(g.name)}"
-           onload="setModalHeroAspect(this)"
            onerror="this.src='${g.header}'">
       <button class="modal-close" onclick="closeModal()" aria-label="Close">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -482,15 +485,6 @@ function renderModal(g) {
   currentAchAppId = String(g.appid);
 }
 
-function setModalHeroAspect(img) {
-  const hero = img?.closest('.modal-hero');
-  if (!hero) return;
-  const w = Number(img.naturalWidth) || 0;
-  const h = Number(img.naturalHeight) || 0;
-  if (!w || !h) return;
-  hero.style.setProperty('--hero-ratio', `${w} / ${h}`);
-}
-
 function infoRow(label, value) {
   if (!value) return '';
   return `<div class="info-row"><span class="label">${label}</span><span class="value">${escHtml(String(value))}</span></div>`;
@@ -509,6 +503,22 @@ function switchTab(id) {
   nextPanel.classList.remove('tab-enter');
   void nextPanel.offsetWidth;
   nextPanel.classList.add('tab-enter');
+}
+
+function handleCardImageError(img) {
+  if (!img) return;
+  const fallback = img.dataset.fallback || '';
+  const fallback2 = img.dataset.fallback2 || '';
+  if (fallback && img.src !== fallback) {
+    img.src = fallback;
+    return;
+  }
+  if (fallback2 && img.src !== fallback2) {
+    img.src = fallback2;
+    return;
+  }
+  img.onerror = null;
+  img.src = 'https://via.placeholder.com/300x450/0d1325/4f8ef7?text=No+Image';
 }
 
 /* ── Reviews ───────────────────────────────────────────────── */
