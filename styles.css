@@ -1072,12 +1072,21 @@ nav a.active {
   font-size: 14px;
   color: var(--text-2);
   line-height: 1.8;
+  /* Prevent Steam's fixed-width HTML from overflowing */
+  overflow: hidden;
+  word-break: break-word;
 }
 
-.game-description h2,
-.game-description h3 {
-  color: var(--text-1);
-  margin: 16px 0 8px;
+/* Clamp ALL children — Steam HTML has divs/imgs with hardcoded px widths */
+.game-description * {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.game-description img {
+  height: auto !important;
+  border-radius: var(--radius-sm);
+  margin: 8px 0;
 }
 
 .game-description a {

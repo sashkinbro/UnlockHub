@@ -65,6 +65,10 @@ function setupSearch() {
       const sec = el.dataset.section;
       if (sec === 'library') showProfileSection();
       if (sec === 'home') showHero();
+      if (sec === 'explore') {
+        showHero();
+        setTimeout(() => { const inp = $('search-input'); if (inp) inp.focus(); }, 100);
+      }
     });
   });
 }
@@ -356,7 +360,7 @@ async function loadReviews(appid, cursor = '*') {
         <div class="review-text" id="rev-${r.id}" style="display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden">
           ${escHtml(r.text)}
         </div>
-        ${r.text.length > 200 ? `<div class="review-expand" onclick="expandReview('rev-${r.id}',this)">Show more</div>` : ''}
+        ${r.text.length > 200 ? `<div class="review-expand" onclick="expandReview('rev-${r.id}',this)">${i18n.t('btn_next') === 'Load more' ? 'Show more' : 'Більше'}</div>` : ''}
       </div>`).join('');
 
     body.innerHTML = header +
@@ -554,8 +558,11 @@ function setupVideoModal() {
 }
 
 function openVideo(url, name) {
+  if (!url) return;
+  // Proxy through Cloudflare Worker to bypass Steam CDN CORS restrictions
+  const proxyUrl = `${WORKER_URL}/api/video?url=${encodeURIComponent(url)}`;
   const player = $('video-player');
-  player.src = url;
+  player.src = proxyUrl;
   player.load();
   player.play().catch(() => { });
   $('video-modal-title').textContent = name;
@@ -644,11 +651,14 @@ function escHtml(s) {
 }
 
 function sanitizeHtml(html) {
-  // Allow basic formatting, strip scripts/iframes
+  // Strip scripts, iframes, event handlers, and ALL inline styles (Steam HTML has fixed widths)
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, '')
     .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
-    .replace(/on\w+="[^"]*"/gi, '');
+    .replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
+    .replace(/\sstyle\s*=\s*"[^"]*"/gi, '')  // remove all inline styles
+    .replace(/\swidth\s*=\s*"[^"]*"/gi, '')  // remove fixed width attrs
+    .replace(/\sheight\s*=\s*"[^"]*"/gi, ''); // remove fixed height attrs
 }
 
 function formatCents(val) {
