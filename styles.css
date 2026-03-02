@@ -1066,6 +1066,13 @@ nav a.active {
   box-shadow: var(--shadow-lg);
   max-height: 94vh;
   display: block;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.modal-box::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .modal-hero {
@@ -1156,6 +1163,13 @@ nav a.active {
   z-index: 3;
   background: linear-gradient(180deg, rgba(11, 20, 40, 0.96), rgba(11, 20, 40, 0.86));
   backdrop-filter: blur(10px);
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.modal-tabs::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .tab-btn {
