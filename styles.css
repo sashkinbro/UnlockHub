@@ -1201,6 +1201,25 @@ nav a.active {
   word-break: break-word;
 }
 
+.game-description h1,
+.game-description h2,
+.game-description h3,
+.game-description h4 {
+  margin: 12px 0 8px;
+  line-height: 1.25;
+  color: var(--text-1);
+}
+
+.game-description p {
+  margin: 0 0 10px;
+}
+
+.game-description ul,
+.game-description ol {
+  margin: 8px 0 12px;
+  padding-left: 20px;
+}
+
 /* Clamp ALL children — Steam HTML has divs/imgs with hardcoded px widths */
 .game-description * {
   max-width: 100% !important;
@@ -2116,7 +2135,78 @@ footer {
   }
 
   .modal-body {
-    padding-bottom: 20px;
+    padding: 12px 12px 18px;
+  }
+
+  .modal-hero-overlay {
+    padding: 14px;
+  }
+
+  .modal-title {
+    font-size: 28px;
+    margin-bottom: 6px;
+  }
+
+  .modal-meta-row {
+    gap: 10px;
+    font-size: 12px;
+  }
+
+  .tab-panel.active {
+    padding: 0;
+  }
+
+  .overview-grid {
+    gap: 14px;
+  }
+
+  .info-box {
+    padding: 14px;
+  }
+
+  .game-description {
+    font-size: 13px;
+    line-height: 1.65;
+  }
+
+  .game-description h1,
+  .game-description h2,
+  .game-description h3,
+  .game-description h4 {
+    margin: 10px 0 6px;
+    font-size: 16px;
+  }
+
+  .game-description p {
+    margin: 0 0 8px;
+  }
+
+  .game-description img,
+  .game-description video {
+    margin: 6px 0;
+    border-radius: 8px;
+  }
+
+  .screenshots-grid {
+    gap: 10px;
+  }
+
+  .videos-grid {
+    gap: 10px;
+  }
+
+  .ach-profile-bar {
+    padding: 12px;
+  }
+
+  .ach-item {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .ach-icon {
+    width: 40px;
+    height: 40px;
   }
 
   .video-modal video,
