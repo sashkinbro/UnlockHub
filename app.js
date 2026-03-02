@@ -21,6 +21,7 @@ let topGamesUpdatedAt = 0;
 let topGamesTotal = 0;
 let topGamesLoading = false;
 let suppressVideoErrorToast = false;
+let currentProfileData = null;
 
 /* ── DOM refs ──────────────────────────────────────────────── */
 const $ = id => document.getElementById(id);
@@ -58,6 +59,7 @@ function setupLangBtn() {
     btn.querySelector('.lang-label').textContent = i18n.t('lang_switch');
     btn.querySelector('.flag').textContent = next === 'uk' ? '🇺🇦' : '🇬🇧';
     if (topGamesCache.length) renderTopGames(topGamesCache, topGamesUpdatedAt);
+    if (currentProfileData) renderProfile(currentProfileData);
     updateTopGamesMoreBtn();
   });
 }
@@ -624,6 +626,7 @@ async function loadProfile(url) {
     const data = await api(`/api/profile?url=${encodeURIComponent(url)}`);
     currentProfileSteamId = data.steamid || '';
     if (currentProfileSteamId) localStorage.setItem('uh_steamid', currentProfileSteamId);
+    currentProfileData = data;
     renderProfile(data);
   } catch (e) {
     $('profile-header').innerHTML = `<div class="loading-center">${emptyState('error', i18n.t('profile_private'))}</div>`;
