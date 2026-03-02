@@ -336,7 +336,7 @@ function setupModalClose() {
 }
 
 function showModalLoading() {
-  $('modal-box').innerHTML = `<div class="loading-center"><div class="spinner"></div><p>${i18n.t('loading')}</p></div>`;
+  $('modal-box').innerHTML = skeletonMarkup('modal');
 }
 
 function renderModal(g) {
@@ -458,7 +458,7 @@ function renderModal(g) {
       <!-- REVIEWS -->
       <div class="tab-panel" id="tab-reviews">
         <div id="reviews-body">
-          <div class="loading-center"><div class="spinner"></div></div>
+          ${skeletonMarkup('reviews')}
         </div>
       </div>
 
@@ -466,7 +466,7 @@ function renderModal(g) {
       <div class="tab-panel" id="tab-achievements">
         ${achProfileBar}
         <div id="ach-body">
-          <div class="loading-center"><div class="spinner"></div></div>
+          ${skeletonMarkup('achievements')}
         </div>
       </div>
     </div>`;
@@ -483,8 +483,18 @@ function infoRow(label, value) {
 }
 
 function switchTab(id) {
+  const nextPanelId = `tab-${id}`;
+  const activePanel = document.querySelector('.tab-panel.active');
+  const nextPanel = $(nextPanelId);
+  if (!nextPanel || activePanel === nextPanel) return;
+
   $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
-  $$('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `tab-${id}`));
+
+  if (activePanel) activePanel.classList.remove('active', 'tab-enter');
+  nextPanel.classList.add('active');
+  nextPanel.classList.remove('tab-enter');
+  void nextPanel.offsetWidth;
+  nextPanel.classList.add('tab-enter');
 }
 
 /* ── Reviews ───────────────────────────────────────────────── */
@@ -585,7 +595,7 @@ async function loadAchievements(appid) {
   }
 
   if (!body) return;
-  body.innerHTML = `<div class="loading-center"><div class="spinner"></div></div>`;
+  body.innerHTML = skeletonMarkup('achievements');
 
   try {
     const lang = i18n.lang;
@@ -710,8 +720,8 @@ async function loadProfile(url) {
   achProfileEditMode = false;
   localStorage.setItem('uh_profile_url', url);
   renderProfileInputControls();
-  $('profile-header').innerHTML = `<div class="loading-center"><div class="spinner"></div></div>`;
-  $('library-grid').innerHTML = '';
+  $('profile-header').innerHTML = skeletonMarkup('profile-header');
+  $('library-grid').innerHTML = skeletonMarkup('library-grid');
 
   try {
     const data = await api(`/api/profile?url=${encodeURIComponent(url)}`);
@@ -1018,7 +1028,142 @@ function formatCents(val) {
 
 function showLoading(containerId) {
   const el = $(containerId);
-  if (el) el.innerHTML = `<div class="loading-center"><div class="spinner"></div><p>${i18n.t('loading')}</p></div>`;
+  if (!el) return;
+  if (containerId === 'results-grid') {
+    el.innerHTML = skeletonMarkup('results-grid');
+    return;
+  }
+  if (containerId === 'top-games-grid') {
+    el.innerHTML = skeletonMarkup('top-games-grid');
+    return;
+  }
+  if (containerId === 'library-grid') {
+    el.innerHTML = skeletonMarkup('library-grid');
+    return;
+  }
+  el.innerHTML = skeletonMarkup('generic');
+}
+
+function skeletonMarkup(type = 'generic') {
+  if (type === 'results-grid') {
+    return Array.from({ length: 12 }).map(() => `
+      <article class="skeleton-card">
+        <div class="skeleton skeleton-media"></div>
+        <div class="skeleton-card-body">
+          <div class="skeleton skeleton-line skeleton-line-lg"></div>
+          <div class="skeleton skeleton-line skeleton-line-md"></div>
+        </div>
+      </article>`).join('');
+  }
+
+  if (type === 'top-games-grid') {
+    return Array.from({ length: 12 }).map(() => `
+      <article class="skeleton-card top-card-skeleton">
+        <div class="skeleton skeleton-media"></div>
+        <div class="skeleton-card-body">
+          <div class="skeleton skeleton-line skeleton-line-lg"></div>
+          <div class="skeleton skeleton-line skeleton-line-sm"></div>
+        </div>
+      </article>`).join('');
+  }
+
+  if (type === 'library-grid') {
+    return Array.from({ length: 10 }).map(() => `
+      <article class="library-skeleton-card">
+        <div class="skeleton skeleton-media"></div>
+        <div class="skeleton-card-body">
+          <div class="skeleton skeleton-line skeleton-line-lg"></div>
+          <div class="skeleton skeleton-line skeleton-line-sm"></div>
+        </div>
+      </article>`).join('');
+  }
+
+  if (type === 'profile-header') {
+    return `
+      <div class="profile-header-skeleton">
+        <div class="skeleton skeleton-avatar"></div>
+        <div class="profile-header-skeleton-main">
+          <div class="skeleton skeleton-line skeleton-line-lg"></div>
+          <div class="skeleton skeleton-line skeleton-line-md"></div>
+          <div class="profile-header-skeleton-stats">
+            <div class="skeleton skeleton-line skeleton-line-sm"></div>
+            <div class="skeleton skeleton-line skeleton-line-sm"></div>
+            <div class="skeleton skeleton-line skeleton-line-sm"></div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  if (type === 'reviews') {
+    return `
+      <div class="loading-skeleton-stack">
+        <div class="skeleton skeleton-line skeleton-line-lg"></div>
+        <div class="skeleton skeleton-line skeleton-line-sm"></div>
+        ${Array.from({ length: 3 }).map(() => `
+          <article class="review-skeleton-card">
+            <div class="review-skeleton-head">
+              <div class="skeleton skeleton-thumb"></div>
+              <div class="review-skeleton-meta">
+                <div class="skeleton skeleton-line skeleton-line-md"></div>
+                <div class="skeleton skeleton-line skeleton-line-sm"></div>
+              </div>
+            </div>
+            <div class="skeleton skeleton-line"></div>
+            <div class="skeleton skeleton-line"></div>
+            <div class="skeleton skeleton-line skeleton-line-md"></div>
+          </article>`).join('')}
+      </div>`;
+  }
+
+  if (type === 'achievements') {
+    return `
+      <div class="loading-skeleton-stack">
+        <div class="achievement-skeleton-summary">
+          <div class="skeleton skeleton-ring"></div>
+          <div class="achievement-skeleton-lines">
+            <div class="skeleton skeleton-line skeleton-line-md"></div>
+            <div class="skeleton skeleton-line skeleton-line-sm"></div>
+          </div>
+        </div>
+        ${Array.from({ length: 4 }).map(() => `
+          <article class="achievement-skeleton-item">
+            <div class="skeleton skeleton-ach-icon"></div>
+            <div class="achievement-skeleton-text">
+              <div class="skeleton skeleton-line skeleton-line-md"></div>
+              <div class="skeleton skeleton-line"></div>
+            </div>
+          </article>`).join('')}
+      </div>`;
+  }
+
+  if (type === 'modal') {
+    return `
+      <div class="modal-skeleton">
+        <div class="skeleton modal-skeleton-hero"></div>
+        <div class="modal-skeleton-tabs">
+          <div class="skeleton skeleton-pill"></div>
+          <div class="skeleton skeleton-pill"></div>
+          <div class="skeleton skeleton-pill"></div>
+          <div class="skeleton skeleton-pill"></div>
+        </div>
+        <div class="modal-skeleton-body">
+          <div class="skeleton skeleton-line skeleton-line-lg"></div>
+          <div class="skeleton skeleton-line"></div>
+          <div class="skeleton skeleton-line"></div>
+          <div class="skeleton skeleton-line skeleton-line-md"></div>
+        </div>
+      </div>`;
+  }
+
+  return `
+    <div class="loading-center">
+      <div class="loading-skeleton-stack">
+        <div class="skeleton skeleton-line skeleton-line-lg"></div>
+        <div class="skeleton skeleton-line"></div>
+        <div class="skeleton skeleton-line skeleton-line-md"></div>
+      </div>
+      <p>${i18n.t('loading')}</p>
+    </div>`;
 }
 
 function emptyState(type, msg = '') {
