@@ -1430,6 +1430,13 @@ nav a.active {
   transition: all var(--transition);
 }
 
+.lang-btn .lang-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .reviews-list {
   display: flex;
   flex-direction: column;
@@ -2227,8 +2234,16 @@ footer {
   }
 
   .lang-btn {
+    width: 136px;
+    max-width: 136px;
     padding: 6px 10px;
-    gap: 5px;
+    gap: 6px;
+    justify-content: flex-start;
+    flex-shrink: 0;
+  }
+
+  .lang-btn .lang-label {
+    max-width: 88px;
   }
 
   .hero-bot-line {
