@@ -137,9 +137,10 @@ function renderGameCards(games, container) {
   }
   container.innerHTML = games.map((g, i) => `
     <div class="game-card" style="animation-delay:${i * 40}ms" onclick="openGameById('${g.appid}')">
-      <div class="card-img-wrap">
+      <div class="card-img-wrap${g.is_main_game === false ? ' addon' : ''}">
         <img src="${g.cover}" alt="${escHtml(g.name)}" loading="lazy"
              onerror="this.src='${g.fallback || 'https://via.placeholder.com/300x450/0d1325/4f8ef7?text=No+Image'}'">
+        ${g.is_main_game === false ? `<span class="card-addon">DLC / Add-on</span>` : ''}
         ${g.price?.discount ? `<span class="card-discount">-${g.price.discount}%</span>` : ''}
       </div>
       <div class="card-body">
@@ -279,8 +280,11 @@ function renderModal(g) {
           ${(g.movies || []).map(m => {
         // Prefer mp4, fallback to webm; both already have https:// from worker
         const videoUrl = m.mp4_max || m.mp4_480 || m.webm_max || m.webm_480;
+        if (!videoUrl) return '';
+        const encodedUrl = encodeURIComponent(videoUrl);
+        const encodedName = encodeURIComponent(m.name || 'Trailer');
         return `
-            <div class="video-item" onclick="openVideo('${videoUrl}','${escHtml(m.name)}')">
+            <div class="video-item" onclick="openVideoByEncoded('${encodedUrl}','${encodedName}')">
               <img src="${m.thumb}" alt="${escHtml(m.name)}" loading="lazy">
               <div class="video-play-btn">
                 <svg viewBox="0 0 80 80" fill="none"><circle cx="40" cy="40" r="39" stroke="white" stroke-opacity="0.3" stroke-width="2"/><circle cx="40" cy="40" r="39" fill="rgba(79,142,247,0.2)"/><path d="M33 28l22 12-22 12V28z" fill="white"/></svg>
@@ -555,6 +559,14 @@ function updateLightbox() {
 function setupVideoModal() {
   $('video-modal-close').addEventListener('click', closeVideoModal);
   $('video-modal').addEventListener('click', e => { if (e.target === $('video-modal')) closeVideoModal(); });
+  const player = $('video-player');
+  player.addEventListener('error', () => {
+    showToast(i18n.lang === 'uk' ? 'Не вдалося завантажити відео' : 'Failed to load video', 'error');
+  });
+}
+
+function openVideoByEncoded(encodedUrl, encodedName) {
+  openVideo(decodeURIComponent(encodedUrl), decodeURIComponent(encodedName));
 }
 
 function openVideo(url, name) {
@@ -562,6 +574,7 @@ function openVideo(url, name) {
   // Proxy through Cloudflare Worker to bypass Steam CDN CORS restrictions
   const proxyUrl = `${WORKER_URL}/api/video?url=${encodeURIComponent(url)}`;
   const player = $('video-player');
+  player.crossOrigin = 'anonymous';
   player.src = proxyUrl;
   player.load();
   player.play().catch(() => { });

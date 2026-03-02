@@ -689,8 +689,35 @@ nav a.active {
   border-radius: 0;
 }
 
+.card-img-wrap.addon {
+  background: linear-gradient(180deg, #0f1a2f 0%, #0a1222 100%);
+}
+
+.card-img-wrap.addon img {
+  object-fit: contain;
+  padding: 10px;
+}
+
 .game-card:hover .card-img-wrap img {
   transform: scale(1.06);
+}
+
+.game-card:hover .card-img-wrap.addon img {
+  transform: scale(1.02);
+}
+
+.card-addon {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  background: rgba(10, 18, 34, 0.86);
+  color: var(--text-2);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 3px 7px;
+  border-radius: 6px;
 }
 
 .card-discount {
@@ -917,6 +944,7 @@ nav a.active {
   overflow-y: auto;
   padding: 20px;
   animation: fadeIn 0.2s ease;
+  overscroll-behavior: contain;
 }
 
 .modal-overlay.hidden {
@@ -934,6 +962,9 @@ nav a.active {
   overflow: hidden;
   animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   box-shadow: var(--shadow-lg);
+  max-height: calc(100vh - 40px);
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-hero {
@@ -1044,6 +1075,8 @@ nav a.active {
 
 .modal-body {
   padding: 28px;
+  overflow-y: auto;
+  max-height: calc(100vh - 520px);
 }
 
 .tab-panel {
@@ -1627,7 +1660,7 @@ nav a.active {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   background: #000;
-  width: 900px;
+  width: min(900px, 92vw);
 }
 
 .video-modal-title {
@@ -1797,6 +1830,7 @@ footer {
 
   .modal-body {
     padding: 16px;
+    max-height: calc(100vh - 360px);
   }
 
   .overview-grid {
@@ -1887,6 +1921,24 @@ footer {
   .modal-box {
     border-radius: 0;
     min-height: 100vh;
+    max-height: 100vh;
+  }
+
+  .modal-body {
+    max-height: calc(100vh - 300px);
+  }
+
+  .video-modal video,
+  .video-modal iframe {
+    width: 100vw;
+    max-width: 100vw;
+    max-height: 60vh;
+    border-radius: 0;
+  }
+
+  .video-modal-title {
+    padding: 0 16px;
+    text-align: center;
   }
 
   .profile-header {
