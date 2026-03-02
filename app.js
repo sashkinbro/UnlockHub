@@ -303,11 +303,6 @@ function appendTopGames(games, startIndex = 0) {
 
 function updateTopGamesHeader(count, updatedAt = 0) {
   $('top-games-count').textContent = String(count || 0);
-  if (updatedAt) {
-    const dt = new Date(updatedAt * 1000);
-    $('top-games-updated').textContent = `${i18n.t('top_games_updated')}: ${dt.toLocaleDateString()}`;
-    return;
-  }
   $('top-games-updated').textContent = i18n.t('top_games_subtitle');
 }
 
