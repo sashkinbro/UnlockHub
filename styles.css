@@ -462,12 +462,12 @@ nav a.active {
 .hero {
   position: relative;
   z-index: 1;
-  min-height: 100vh;
+  min-height: clamp(640px, 86vh, 920px);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 80px 24px 60px;
+  padding: 72px 24px 34px;
   text-align: center;
   overflow: hidden;
 }
@@ -698,6 +698,15 @@ nav a.active {
 .top-games-actions {
   margin-top: 20px;
   display: flex;
+  justify-content: center;
+}
+
+.top-live-section {
+  padding-top: 22px;
+}
+
+.top-games-grid {
+  grid-template-columns: repeat(auto-fill, minmax(165px, 165px));
   justify-content: center;
 }
 
@@ -1095,6 +1104,11 @@ nav a.active {
   overflow: visible;
 }
 
+.modal-body>.tab-panel {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
 .tab-panel {
   display: none;
 }
@@ -1109,6 +1123,8 @@ nav a.active {
   display: grid;
   grid-template-columns: 1fr 260px;
   gap: 28px;
+  max-width: 1080px;
+  margin: 0 auto;
 }
 
 @media (max-width:720px) {
