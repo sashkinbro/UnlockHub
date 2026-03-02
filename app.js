@@ -24,7 +24,8 @@ let suppressVideoErrorToast = false;
 let currentProfileData = null;
 let achProfileEditMode = !currentProfileUrl;
 let profileEditMode = !currentProfileUrl;
-let profileSynced = false;
+let profileSynced = !!currentProfileUrl;
+let profileLoading = false;
 const CACHE_TTL_MS = {
   profile: 1000 * 60 * 60 * 6,
   achievements: 1000 * 60 * 20,
@@ -189,6 +190,9 @@ function showProfileSection() {
   $('top-live-section').classList.add('hidden');
   $('results-section').classList.add('hidden');
   $('profile-section').classList.remove('hidden');
+  if (currentProfileUrl && !currentProfileData && !profileLoading) {
+    loadProfile(currentProfileUrl, { showSection: false });
+  }
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -717,6 +721,12 @@ function setupProfileSection() {
   const wrap = document.querySelector('.profile-input-wrap');
   if (!wrap) return;
 
+  if (currentProfileUrl) {
+    profileSynced = true;
+    profileEditMode = false;
+    achProfileEditMode = false;
+  }
+
   renderProfileInputControls();
 
   wrap.addEventListener('click', e => {
@@ -764,8 +774,10 @@ function renderProfileInputControls() {
   }
 }
 
-async function loadProfile(url) {
-  showProfileSection();
+async function loadProfile(url, options = {}) {
+  const { showSection = true } = options;
+  if (showSection) showProfileSection();
+  profileLoading = true;
   const normalizedUrl = normalizeProfileUrl(url);
   currentProfileUrl = normalizedUrl;
   achProfileEditMode = false;
@@ -802,6 +814,8 @@ async function loadProfile(url) {
     profileEditMode = true;
     renderProfileInputControls();
     $('profile-header').innerHTML = `<div class="loading-center">${emptyState('error', i18n.t('profile_private'))}</div>`;
+  } finally {
+    profileLoading = false;
   }
 }
 
