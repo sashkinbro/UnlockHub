@@ -1311,11 +1311,18 @@ nav a.active {
 
 .review-score-box {
   text-align: center;
+  overflow: hidden;
 }
 
 .review-score-big {
-  font-size: 36px;
+  font-size: clamp(22px, 1.75vw, 34px);
   font-weight: 900;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-wrap: balance;
+  max-width: 100%;
+  margin-inline: auto;
 }
 
 .review-score-pos {
@@ -1357,8 +1364,17 @@ nav a.active {
 .review-num {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
   font-size: 12px;
   color: var(--text-2);
+}
+
+.review-num span {
+  min-width: 0;
+  flex: 1 1 130px;
+  overflow-wrap: anywhere;
 }
 
 /* Screenshots */
