@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupSearch();
   setupParticles();
   setupLangBtn();
+  setupMobileMenu();
   setupModalClose();
   setupLightbox();
   setupVideoModal();
@@ -62,6 +63,38 @@ function setupLangBtn() {
     if (topGamesCache.length) renderTopGames(topGamesCache, topGamesUpdatedAt);
     if (currentProfileData) renderProfile(currentProfileData);
     updateTopGamesMoreBtn();
+  });
+}
+
+function setupMobileMenu() {
+  const btn = $('mobile-menu-btn');
+  const menu = $('mobile-menu');
+  if (!btn || !menu) return;
+
+  const closeMenu = () => {
+    menu.classList.add('hidden');
+    btn.setAttribute('aria-expanded', 'false');
+  };
+
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const open = menu.classList.toggle('hidden') === false;
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+
+  menu.addEventListener('click', e => {
+    const target = e.target.closest('a');
+    if (target) closeMenu();
+  });
+
+  document.addEventListener('click', e => {
+    if (!menu.classList.contains('hidden') && !menu.contains(e.target) && e.target !== btn) {
+      closeMenu();
+    }
+  });
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeMenu();
   });
 }
 
