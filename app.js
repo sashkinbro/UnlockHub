@@ -153,7 +153,7 @@ async function loadTopGames() {
   updateTopGamesMoreBtn();
   showLoading('top-games-grid');
   try {
-    const data = await api('/api/top-games?limit=20&offset=0');
+    const data = await api('/api/top-games?limit=24&offset=0');
     topGamesCache = data.games || [];
     topGamesUpdatedAt = data.updated_at || 0;
     topGamesTotal = data.total || topGamesCache.length;
@@ -174,7 +174,7 @@ async function loadMoreTopGames() {
   topGamesLoading = true;
   updateTopGamesMoreBtn(true);
   try {
-    const data = await api(`/api/top-games?limit=20&offset=${topGamesCache.length}`);
+    const data = await api(`/api/top-games?limit=24&offset=${topGamesCache.length}`);
     const incoming = data.games || [];
     topGamesTotal = data.total || topGamesTotal || (topGamesCache.length + incoming.length);
     topGamesCache = topGamesCache.concat(incoming);
