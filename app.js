@@ -14,6 +14,7 @@ let currentProfileSteamId = '';
 let currentAchAppId = '';
 let reviewCursor = '*';
 let reviewsLoaded = false;
+let hlsPlayer = null;
 
 /* ── DOM refs ──────────────────────────────────────────────── */
 const $ = id => document.getElementById(id);
@@ -189,7 +190,7 @@ function closeModal() {
 }
 
 function setupModalClose() {
-  $('modal-overlay').addEventListener('click', e => { if (e.target === $('modal-overlay')) closeModal(); });
+  // Keep close behavior explicit (X / Esc) to avoid accidental closes while scrolling.
   document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeLightbox(); closeVideoModal(); } });
 }
 
@@ -202,8 +203,9 @@ function renderModal(g) {
     ? Math.round(g.review_summary.total_positive / g.review_summary.total_reviews * 100) : null;
   const scoreClass = pct >= 70 ? 'pos' : pct >= 40 ? 'mix' : 'neg';
   const moviesWithUrl = (g.movies || []).map(m => {
-    const videoUrl = m.mp4_max || m.mp4_480 || m.webm_max || m.webm_480 || '';
-    return { ...m, videoUrl };
+    const videoUrl = m.mp4_max || m.mp4_480 || m.hls_h264 || m.webm_max || m.webm_480 || '';
+    const streamType = m.hls_h264 ? 'hls' : (videoUrl.includes('.m3u8') ? 'hls' : 'file');
+    return { ...m, videoUrl, streamType };
   }).filter(m => m.videoUrl);
 
   $('modal-box').innerHTML = `
@@ -284,8 +286,9 @@ function renderModal(g) {
           ${moviesWithUrl.map(m => {
         const encodedUrl = encodeURIComponent(m.videoUrl);
         const encodedName = encodeURIComponent(m.name || 'Trailer');
+        const encodedType = encodeURIComponent(m.streamType || 'file');
         return `
-            <div class="video-item" onclick="openVideoByEncoded('${encodedUrl}','${encodedName}')">
+            <div class="video-item" onclick="openVideoByEncoded('${encodedUrl}','${encodedName}','${encodedType}')">
               <img src="${m.thumb}" alt="${escHtml(m.name)}" loading="lazy">
               <div class="video-play-btn">
                 <svg viewBox="0 0 80 80" fill="none"><circle cx="40" cy="40" r="39" stroke="white" stroke-opacity="0.3" stroke-width="2"/><circle cx="40" cy="40" r="39" fill="rgba(79,142,247,0.2)"/><path d="M33 28l22 12-22 12V28z" fill="white"/></svg>
@@ -368,9 +371,25 @@ async function loadReviews(appid, cursor = '*') {
         ${r.text.length > 200 ? `<div class="review-expand" onclick="expandReview('rev-${r.id}',this)">${i18n.t('btn_next') === 'Load more' ? 'Show more' : 'Більше'}</div>` : ''}
       </div>`).join('');
 
-    body.innerHTML = header +
-      (reviews.length ? cards : `<p style="color:var(--text-2);text-align:center;padding:40px">${i18n.t('reviews_empty')}</p>`) +
-      (data.cursor && data.cursor !== '*' && reviews.length === 10 ? `<div style="text-align:center;margin-top:16px"><button class="btn btn-ghost" onclick="loadMoreReviews('${appid}','${data.cursor}')">${i18n.t('btn_next')}</button></div>` : '');
+    const canLoadMore = data.cursor && data.cursor !== '*' && reviews.length === 10;
+    if (cursor === '*') {
+      body.innerHTML = header +
+        (reviews.length
+          ? `<div class="reviews-list">${cards}</div>`
+          : `<p style="color:var(--text-2);text-align:center;padding:40px">${i18n.t('reviews_empty')}</p>`) +
+        `<div style="text-align:center;margin-top:16px" id="reviews-more-wrap">
+          ${canLoadMore ? `<button class="btn btn-ghost" onclick="loadMoreReviews('${appid}','${data.cursor}')">${i18n.t('btn_next')}</button>` : ''}
+        </div>`;
+    } else {
+      const list = body.querySelector('.reviews-list');
+      if (list) list.insertAdjacentHTML('beforeend', cards);
+      const moreWrap = $('reviews-more-wrap');
+      if (moreWrap) {
+        moreWrap.innerHTML = canLoadMore
+          ? `<button class="btn btn-ghost" onclick="loadMoreReviews('${appid}','${data.cursor}')">${i18n.t('btn_next')}</button>`
+          : '';
+      }
+    }
   } catch {
     if (body) body.innerHTML = `<p style="color:var(--text-2);text-align:center;padding:40px">${i18n.t('error_generic')}</p>`;
   }
@@ -383,7 +402,7 @@ function expandReview(id, btn) {
 }
 
 async function loadMoreReviews(appid, cursor) {
-  const btn = document.querySelector('.reviews-section-more');
+  const btn = document.querySelector('#reviews-more-wrap .btn');
   if (btn) btn.disabled = true;
   await loadReviews(appid, cursor);
 }
@@ -573,23 +592,75 @@ function setupVideoModal() {
   });
 }
 
-function openVideoByEncoded(encodedUrl, encodedName) {
+function openVideoByEncoded(encodedUrl, encodedName, encodedType = 'file') {
   try {
-    openVideo(decodeURIComponent(encodedUrl), decodeURIComponent(encodedName));
+    openVideo(decodeURIComponent(encodedUrl), decodeURIComponent(encodedName), decodeURIComponent(encodedType || 'file'));
   } catch {
-    openVideo(encodedUrl, encodedName);
+    openVideo(encodedUrl, encodedName, 'file');
   }
 }
 
-function openVideo(url, name) {
+function ensureHlsScript() {
+  return new Promise((resolve, reject) => {
+    if (window.Hls) return resolve(window.Hls);
+    const existing = document.querySelector('script[data-hlsjs="1"]');
+    if (existing) {
+      existing.addEventListener('load', () => resolve(window.Hls));
+      existing.addEventListener('error', reject);
+      return;
+    }
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.20/dist/hls.min.js';
+    s.async = true;
+    s.dataset.hlsjs = '1';
+    s.onload = () => resolve(window.Hls);
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+function destroyHlsPlayer() {
+  if (hlsPlayer) {
+    try { hlsPlayer.destroy(); } catch { }
+    hlsPlayer = null;
+  }
+}
+
+async function openVideo(url, name, streamType = 'file') {
   if (!url) return;
-  // Proxy through Cloudflare Worker to bypass Steam CDN CORS restrictions
-  const proxyUrl = `${WORKER_URL}/api/video?url=${encodeURIComponent(url)}`;
   const player = $('video-player');
-  player.crossOrigin = 'anonymous';
-  player.src = proxyUrl;
+  destroyHlsPlayer();
+  player.pause();
+  player.removeAttribute('src');
   player.load();
-  player.play().catch(() => { });
+
+  if (streamType === 'hls' || /\.m3u8(\?|$)/i.test(url)) {
+    try {
+      await ensureHlsScript();
+      if (window.Hls && window.Hls.isSupported()) {
+        hlsPlayer = new window.Hls();
+        hlsPlayer.loadSource(url);
+        hlsPlayer.attachMedia(player);
+        hlsPlayer.on(window.Hls.Events.MANIFEST_PARSED, () => {
+          player.play().catch(() => { });
+        });
+      } else {
+        player.src = url;
+        player.load();
+        player.play().catch(() => { });
+      }
+    } catch {
+      player.src = url;
+      player.load();
+      player.play().catch(() => { });
+    }
+  } else {
+    player.crossOrigin = 'anonymous';
+    player.src = url;
+    player.load();
+    player.play().catch(() => { });
+  }
+
   $('video-modal-title').textContent = name;
   $('video-modal').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
@@ -597,6 +668,7 @@ function openVideo(url, name) {
 
 function closeVideoModal() {
   const player = $('video-player');
+  destroyHlsPlayer();
   player.pause();
   player.src = '';
   $('video-modal').classList.add('hidden');

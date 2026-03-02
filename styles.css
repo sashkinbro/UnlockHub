@@ -959,12 +959,11 @@ nav a.active {
   background: var(--bg-1);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
-  overflow: hidden;
+  overflow: auto;
   animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
   box-shadow: var(--shadow-lg);
   max-height: min(94vh, 1100px);
-  display: flex;
-  flex-direction: column;
+  display: block;
 }
 
 .modal-hero {
@@ -972,7 +971,6 @@ nav a.active {
   height: 360px;
   overflow: hidden;
   background: var(--bg-2);
-  flex-shrink: 0;
 }
 
 .modal-hero-img {
@@ -1049,7 +1047,6 @@ nav a.active {
   padding: 16px 24px 0;
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
-  flex-shrink: 0;
 }
 
 .tab-btn {
@@ -1077,9 +1074,7 @@ nav a.active {
 
 .modal-body {
   padding: 28px;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
+  overflow: visible;
 }
 
 .tab-panel {
