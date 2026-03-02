@@ -2059,7 +2059,21 @@ footer {
   }
 
   .lightbox-nav {
-    display: none;
+    width: 42px;
+    height: 42px;
+    top: auto;
+    bottom: 18px;
+    transform: none;
+    background: rgba(0, 0, 0, 0.45);
+    border-color: rgba(255, 255, 255, 0.28);
+  }
+
+  .lightbox-prev {
+    left: 14px;
+  }
+
+  .lightbox-next {
+    right: 14px;
   }
 
   .search-box {

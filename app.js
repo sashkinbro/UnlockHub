@@ -735,6 +735,23 @@ function setupLightbox() {
   $('lightbox-prev').addEventListener('click', () => moveLightbox(-1));
   $('lightbox-next').addEventListener('click', () => moveLightbox(1));
   $('lightbox').addEventListener('click', e => { if (e.target === $('lightbox')) closeLightbox(); });
+  let touchStartX = 0;
+  let touchStartY = 0;
+  $('lightbox').addEventListener('touchstart', e => {
+    const t = e.changedTouches?.[0];
+    if (!t) return;
+    touchStartX = t.clientX;
+    touchStartY = t.clientY;
+  }, { passive: true });
+  $('lightbox').addEventListener('touchend', e => {
+    const t = e.changedTouches?.[0];
+    if (!t) return;
+    const dx = t.clientX - touchStartX;
+    const dy = t.clientY - touchStartY;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) {
+      moveLightbox(dx < 0 ? 1 : -1);
+    }
+  }, { passive: true });
   document.addEventListener('keydown', e => {
     if (!$('lightbox') || $('lightbox').classList.contains('hidden')) return;
     if (e.key === 'ArrowLeft') moveLightbox(-1);
