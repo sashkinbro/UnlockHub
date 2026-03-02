@@ -22,6 +22,7 @@ let topGamesTotal = 0;
 let topGamesLoading = false;
 let suppressVideoErrorToast = false;
 let currentProfileData = null;
+let achProfileEditMode = !currentProfileUrl;
 
 /* ── DOM refs ──────────────────────────────────────────────── */
 const $ = id => document.getElementById(id);
@@ -312,6 +313,21 @@ function renderModal(g) {
     return { ...m, videoUrl, streamType };
   }).filter(m => m.videoUrl);
 
+  const showAchInput = achProfileEditMode || !currentProfileUrl;
+  const achProfileBar = showAchInput
+    ? `<div class="ach-profile-bar">
+          <input class="ach-profile-input" id="ach-profile-input" placeholder="${i18n.t('profile_placeholder')}" type="url" value="${escHtml(currentProfileUrl)}">
+          <button class="btn btn-primary btn-sm" onclick="loadAchievements('${g.appid}')">${i18n.t('btn_sync')}</button>
+       </div>`
+    : `<div class="ach-profile-bar">
+          <div class="ach-profile-saved">
+            <div class="ach-profile-saved-lbl">${i18n.t('ach_saved_profile')}</div>
+            <div class="ach-profile-saved-url">${escHtml(currentProfileUrl)}</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="changeAchievementProfile()">${i18n.t('ach_change_profile')}</button>
+          <button class="btn btn-primary btn-sm" onclick="loadAchievements('${g.appid}')">${i18n.t('btn_sync')}</button>
+       </div>`;
+
   $('modal-box').innerHTML = `
     <div class="modal-hero">
       <img class="modal-hero-img" src="${g.background || g.header}" alt="${escHtml(g.name)}"
@@ -412,10 +428,7 @@ function renderModal(g) {
 
       <!-- ACHIEVEMENTS -->
       <div class="tab-panel" id="tab-achievements">
-        <div class="ach-profile-bar">
-          <input class="ach-profile-input" id="ach-profile-input" placeholder="${i18n.t('profile_placeholder')}" type="url" value="${escHtml(currentProfileUrl)}">
-          <button class="btn btn-primary btn-sm" onclick="loadAchievements('${g.appid}')">${i18n.t('btn_sync')}</button>
-        </div>
+        ${achProfileBar}
         <div id="ach-body">
           <div class="loading-center"><div class="spinner"></div></div>
         </div>
@@ -524,6 +537,7 @@ async function loadAchievements(appid) {
 
   if (profileUrl && profileUrl.includes('steamcommunity.com')) {
     currentProfileUrl = profileUrl;
+    achProfileEditMode = false;
     localStorage.setItem('uh_profile_url', profileUrl);
     // resolve steamid inline from worker
     try {
@@ -575,7 +589,8 @@ async function loadAchievements(appid) {
         </div>
         <div class="ach-counts">
           ${steamid ? `<div><b>${data.unlocked}</b> / ${data.total}</div>
-          <div class="ach-counts" style="color:var(--text-2)">${i18n.t('ach_unlocked')}</div>` :
+          <div class="ach-counts" style="color:var(--text-2)">${i18n.t('ach_unlocked')}</div>
+          ${data.unlocked === 0 ? `<div style="font-size:12px;color:var(--text-3);max-width:260px;margin-top:4px">${i18n.t('ach_zero_hint')}</div>` : ''}` :
         `<div><b>${data.total}</b></div>
           <div class="ach-counts" style="color:var(--text-2)">${i18n.t('tab_achievements')}</div>
           <div style="font-size:12px;color:var(--text-3);max-width:200px;margin-top:4px">${i18n.t('ach_enter_profile')}</div>`}
@@ -618,6 +633,7 @@ async function loadProfile(url) {
   showProfileSection();
   $('profile-url-input').value = url;
   currentProfileUrl = url;
+  achProfileEditMode = false;
   localStorage.setItem('uh_profile_url', url);
   $('profile-header').innerHTML = `<div class="loading-center"><div class="spinner"></div></div>`;
   $('library-grid').innerHTML = '';
@@ -630,6 +646,18 @@ async function loadProfile(url) {
     renderProfile(data);
   } catch (e) {
     $('profile-header').innerHTML = `<div class="loading-center">${emptyState('error', i18n.t('profile_private'))}</div>`;
+  }
+}
+
+function changeAchievementProfile() {
+  currentProfileUrl = '';
+  currentProfileSteamId = '';
+  achProfileEditMode = true;
+  localStorage.removeItem('uh_profile_url');
+  localStorage.removeItem('uh_steamid');
+  if (currentGame) {
+    renderModal(currentGame);
+    switchTab('achievements');
   }
 }
 
