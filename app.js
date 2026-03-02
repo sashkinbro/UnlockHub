@@ -276,12 +276,13 @@ function renderTopGames(games, updatedAt = 0) {
 function topGameCardMarkup(g, i) {
   const portrait2x = `https://cdn.akamai.steamstatic.com/steam/apps/${g.appid}/library_600x900_2x.jpg`;
   const portrait = `https://cdn.akamai.steamstatic.com/steam/apps/${g.appid}/library_600x900.jpg`;
+  const secondary = g.fallback2 || g.fallback || `https://steamcdn-a.akamaihd.net/steam/apps/${g.appid}/header.jpg`;
   return `
     <div class="game-card" style="animation-delay:${i * 25}ms" onclick="openGameById('${g.appid}')">
       <div class="card-img-wrap">
         <img src="${portrait2x}" alt="${escHtml(g.name)}" loading="lazy"
              data-fallback="${portrait}"
-             data-fallback2="${g.cover || g.fallback || g.fallback2 || ''}"
+             data-fallback2="${secondary}"
              onerror="handleCardImageError(this)">
         <span class="card-addon">#${g.rank}</span>
       </div>
