@@ -1011,9 +1011,11 @@ function escHtml(s) {
 }
 
 function sanitizeHtml(html) {
-  // Strip scripts, iframes, event handlers, and ALL inline styles (Steam HTML has fixed widths)
+  // Strip scripts/styles/iframes, event handlers, and ALL inline styles (Steam HTML can break layout)
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<link[\s\S]*?>/gi, '')
     .replace(/<iframe[\s\S]*?<\/iframe>/gi, '')
     .replace(/\son\w+\s*=\s*"[^"]*"/gi, '')
     .replace(/\sstyle\s*=\s*"[^"]*"/gi, '')  // remove all inline styles
