@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="UnlockHub — Discover Steam games, sync your library, explore achievements, screenshots and trailers in a beautiful interface.">
+    <meta property="og:title" content="UnlockHub — Discover Gaming">
+    <meta property="og:description"
+        content="Browse Steam games, explore achievements, watch trailers and sync your library.">
+    <meta property="og:type" content="website">
+    <title>UnlockHub — Discover Gaming</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+
+    <!-- ── Particles ── -->
+    <canvas id="particles-canvas" aria-hidden="true"></canvas>
+
+    <!-- ══ HEADER ══════════════════════════════════════════════ -->
+    <header class="header" id="header">
+        <div class="header-inner">
+            <a href="#" class="logo" data-section="home">
+                <svg class="logo-icon" viewBox="0 0 40 40" fill="none">
+                    <defs>
+                        <linearGradient id="lg1" x1="0" y1="0" x2="40" y2="40">
+                            <stop stop-color="#4f8ef7" />
+                            <stop offset="1" stop-color="#7c4dff" />
+                        </linearGradient>
+                    </defs>
+                    <circle cx="20" cy="20" r="18" stroke="url(#lg1)" stroke-width="2.5" />
+                    <path d="M12 20l5 5 11-10" stroke="url(#lg1)" stroke-width="2.5" stroke-linecap="round"
+                        stroke-linejoin="round" />
+                </svg>
+                <span class="logo-text">Unlock<span class="logo-accent">Hub</span></span>
+            </a>
+
+            <nav>
+                <a href="#" data-section="home" data-i18n="nav_home">Home</a>
+                <a href="#" data-section="explore" data-i18n="nav_explore">Explore</a>
+                <a href="#" data-section="library" data-i18n="nav_library">Library</a>
+            </nav>
+
+            <div class="header-actions">
+                <button class="lang-btn" id="lang-btn" aria-label="Switch language">
+                    <span class="flag">🇬🇧</span>
+                    <span class="lang-label" data-i18n="lang_switch">Українська</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- ══ HERO ════════════════════════════════════════════════ -->
+    <section class="hero" id="hero">
+        <div class="hero-bg" aria-hidden="true"></div>
+
+        <div class="hero-badge">
+            <svg viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 1l1.8 4.6L15 6.5l-3.5 3.4.8 4.8L8 12.4l-4.3 2.3.8-4.8L1 6.5l5.2-.9z" />
+            </svg>
+            Powered by Steam Web API
+        </div>
+
+        <h1>
+            <span data-i18n="hero_title">Discover Your</span><br>
+            <span class="gradient-text" data-i18n="hero_title_accent">Gaming World</span>
+        </h1>
+
+        <p class="hero-subtitle" data-i18n="hero_subtitle">
+            Search any Steam game, sync your library, explore achievements, screenshots &amp; trailers
+        </p>
+
+        <div class="search-wrap">
+            <form id="search-form" role="search">
+                <div class="search-box">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="M21 21l-4.35-4.35" />
+                    </svg>
+                    <input id="search-input" class="search-input" type="search" autocomplete="off"
+                        data-i18n-ph="search_placeholder" placeholder="Game name, Steam store URL, or profile link…"
+                        aria-label="Search Steam games">
+                    <button type="submit" class="search-btn" id="search-btn">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <circle cx="11" cy="11" r="8" />
+                            <path d="M21 21l-4.35-4.35" />
+                        </svg>
+                        <span data-i18n="btn_search">Search</span>
+                    </button>
+                </div>
+            </form>
+
+            <div class="search-hints">
+                <button class="search-hint" data-query="Counter-Strike 2">Counter-Strike 2</button>
+                <button class="search-hint" data-query="Cyberpunk 2077">Cyberpunk 2077</button>
+                <button class="search-hint" data-query="Elden Ring">Elden Ring</button>
+                <button class="search-hint" data-query="Portal 2">Portal 2</button>
+                <button class="search-hint" data-query="The Witcher 3">The Witcher 3</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- ══ RESULTS ══════════════════════════════════════════════ -->
+    <div id="results-section" class="hidden">
+        <div class="section">
+            <div class="section-header">
+                <h2 class="section-title" data-i18n="results_title">Search Results</h2>
+                <span class="section-count" id="results-count">0</span>
+            </div>
+            <div class="games-grid" id="results-grid"></div>
+        </div>
+    </div>
+
+    <!-- ══ PROFILE ══════════════════════════════════════════════ -->
+    <div id="profile-section" class="hidden">
+        <section class="section" style="padding-bottom:0">
+            <h2 class="section-title" data-i18n="profile_title" style="margin-bottom:20px">Steam Profile</h2>
+            <div class="profile-input-wrap">
+                <input id="profile-url-input" class="profile-input" type="url" data-i18n-ph="profile_placeholder"
+                    placeholder="https://steamcommunity.com/id/username">
+                <button class="btn btn-primary" id="profile-sync-btn" data-i18n="btn_sync">Sync Profile</button>
+            </div>
+            <div class="profile-header glass" id="profile-header"
+                style="border-radius:var(--radius-xl);padding:28px 32px;margin-bottom:28px;">
+                <p style="color:var(--text-2);text-align:center;padding:20px 0" data-i18n="ach_enter_profile">
+                    Enter your Steam profile URL to see personal progress
+                </p>
+            </div>
+        </section>
+
+        <div class="section" style="padding-top:0">
+            <div class="section-header">
+                <h2 class="section-title" data-i18n="nav_library">Library</h2>
+            </div>
+            <div class="library-grid" id="library-grid"></div>
+        </div>
+    </div>
+
+    <!-- ══ GAME MODAL ═══════════════════════════════════════════ -->
+    <div id="modal-overlay" class="modal-overlay hidden" role="dialog" aria-modal="true"
+        aria-labelledby="modal-title-text">
+        <div id="modal-box" class="modal-box">
+            <div class="loading-center">
+                <div class="spinner"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ SCREENSHOT LIGHTBOX ══════════════════════════════════ -->
+    <div id="lightbox" class="lightbox hidden" role="dialog" aria-modal="true" aria-label="Screenshot viewer">
+        <img id="lightbox-img" class="lightbox-img" src="" alt="Screenshot">
+        <button class="lightbox-close" id="lightbox-close" aria-label="Close">✕</button>
+        <button class="lightbox-nav lightbox-prev" id="lightbox-prev" aria-label="Previous">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 18l-6-6 6-6" />
+            </svg>
+        </button>
+        <button class="lightbox-nav lightbox-next" id="lightbox-next" aria-label="Next">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 18l6-6-6-6" />
+            </svg>
+        </button>
+        <div class="lightbox-counter" id="lightbox-counter">1 / 1</div>
+    </div>
+
+    <!-- ══ VIDEO MODAL ══════════════════════════════════════════ -->
+    <div id="video-modal" class="video-modal hidden" role="dialog" aria-modal="true" aria-label="Video player">
+        <video id="video-player" controls preload="none" playsinline
+            style="max-width:92vw;max-height:80vh;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.7)">
+            Your browser doesn't support HTML5 video.
+        </video>
+        <div class="video-modal-title" id="video-modal-title"></div>
+        <button class="video-modal-close" id="video-modal-close" aria-label="Close">✕</button>
+    </div>
+
+    <!-- ══ FOOTER ═══════════════════════════════════════════════ -->
+    <footer>
+        <div class="footer-inner">
+            <div class="footer-logo">Unlock<span style="color:var(--blue)">Hub</span></div>
+            <p class="footer-text" data-i18n="footer_tagline">Made with ❤️ for gamers · Powered by Steam API</p>
+            <p class="footer-text" style="margin-top:6px;font-size:12px;color:var(--text-3)">
+                Not affiliated with Valve Corporation. Steam and the Steam logo are trademarks of Valve Corporation.
+            </p>
+        </div>
+    </footer>
+
+    <!-- ══ TOAST CONTAINER ══════════════════════════════════════ -->
+    <div id="toast-container" class="toast-container" aria-live="polite"></div>
+
+    <!-- ══ SCRIPTS ══════════════════════════════════════════════ -->
+    <script src="i18n.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>

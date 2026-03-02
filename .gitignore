@@ -1,0 +1,5 @@
+# Cloudflare Worker — deploy separately via Cloudflare dashboard
+worker.js
+
+# README — internal docs only
+README.md

@@ -1,0 +1,84 @@
+const translations = {
+  en: {
+    nav_home: 'Home', nav_explore: 'Explore', nav_library: 'Library',
+    hero_title: 'Discover Your', hero_title_accent: 'Gaming World',
+    hero_subtitle: 'Search any Steam game, sync your library, explore achievements, screenshots & trailers',
+    search_placeholder: 'Game name, Steam store URL, or profile link…',
+    btn_search: 'Search', btn_close: 'Close', btn_back: 'Back',
+    btn_view_steam: 'View on Steam', btn_sync: 'Sync Profile',
+    results_title: 'Search Results', results_empty: 'No results found. Try a different query.',
+    loading: 'Loading…',
+    tab_overview: 'Overview', tab_screenshots: 'Screenshots',
+    tab_videos: 'Videos', tab_reviews: 'Reviews', tab_achievements: 'Achievements',
+    game_developer: 'Developer', game_publisher: 'Publisher',
+    game_release: 'Release Date', game_genres: 'Genres',
+    game_price: 'Price', game_free: 'Free to Play',
+    game_metacritic: 'Metacritic', game_rating: 'Rating',
+    reviews_positive: 'Positive', reviews_negative: 'Negative',
+    reviews_overall: 'Overall', reviews_empty: 'No reviews available.',
+    ach_unlocked: 'Unlocked', ach_locked: 'Locked',
+    ach_global: 'Global Rate', ach_progress: 'Your Progress',
+    ach_enter_profile: 'Enter your Steam profile URL to see personal progress',
+    ach_empty: 'No achievements in this game.',
+    profile_title: 'Steam Profile', profile_games: 'Games',
+    profile_hours: 'hours played', profile_recent: 'Recently Played',
+    profile_private: 'This profile is private.',
+    profile_placeholder: 'https://steamcommunity.com/id/username',
+    no_videos: 'No trailers available.', no_screenshots: 'No screenshots available.',
+    error_generic: 'Something went wrong. Please try again.',
+    error_not_found: 'Not found.',
+    footer_tagline: 'Made with ❤️ for gamers · Powered by Steam API',
+    lang_switch: 'Українська',
+  },
+  uk: {
+    nav_home: 'Головна', nav_explore: 'Огляд', nav_library: 'Бібліотека',
+    hero_title: 'Відкривай свій', hero_title_accent: 'ігровий світ',
+    hero_subtitle: 'Шукай ігри Steam, синхронізуй бібліотеку, досліджуй досягнення, скріншоти та трейлери',
+    search_placeholder: 'Назва гри, посилання на Steam або профіль…',
+    btn_search: 'Знайти', btn_close: 'Закрити', btn_back: 'Назад',
+    btn_view_steam: 'Відкрити в Steam', btn_sync: 'Синхронізувати',
+    results_title: 'Результати пошуку', results_empty: 'Нічого не знайдено. Спробуйте інший запит.',
+    loading: 'Завантаження…',
+    tab_overview: 'Огляд', tab_screenshots: 'Скріншоти',
+    tab_videos: 'Відео', tab_reviews: 'Відгуки', tab_achievements: 'Досягнення',
+    game_developer: 'Розробник', game_publisher: 'Видавець',
+    game_release: 'Дата виходу', game_genres: 'Жанри',
+    game_price: 'Ціна', game_free: 'Безкоштовна',
+    game_metacritic: 'Metacritic', game_rating: 'Рейтинг',
+    reviews_positive: 'Позитивні', reviews_negative: 'Негативні',
+    reviews_overall: 'Загальна', reviews_empty: 'Відгуків немає.',
+    ach_unlocked: 'Отримано', ach_locked: 'Не отримано',
+    ach_global: 'Глобально', ach_progress: 'Ваш прогрес',
+    ach_enter_profile: 'Введіть посилання на профіль Steam, щоб побачити ваш прогрес',
+    ach_empty: 'У цій грі немає досягнень.',
+    profile_title: 'Профіль Steam', profile_games: 'Ігор',
+    profile_hours: 'годин зіграно', profile_recent: 'Нещодавні',
+    profile_private: 'Цей профіль приватний.',
+    profile_placeholder: 'https://steamcommunity.com/id/username',
+    no_videos: 'Трейлерів немає.', no_screenshots: 'Скріншотів немає.',
+    error_generic: 'Щось пішло не так. Спробуйте ще раз.',
+    error_not_found: 'Не знайдено.',
+    footer_tagline: 'Зроблено з ❤️ для геймерів · Powered by Steam API',
+    lang_switch: 'English',
+  }
+};
+
+const i18n = {
+  lang: 'en',
+  t(key) { return translations[this.lang][key] || translations.en[key] || key; },
+  setLang(lang) {
+    this.lang = lang;
+    document.documentElement.lang = lang;
+    localStorage.setItem('se_lang', lang);
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      el.textContent = this.t(el.dataset.i18n);
+    });
+    document.querySelectorAll('[data-i18n-ph]').forEach(el => {
+      el.placeholder = this.t(el.dataset.i18nPh);
+    });
+  },
+  init() {
+    const saved = localStorage.getItem('se_lang') || (navigator.language.startsWith('uk') ? 'uk' : 'en');
+    this.setLang(saved);
+  }
+};
