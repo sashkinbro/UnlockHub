@@ -695,6 +695,12 @@ nav a.active {
   font-size: 13px;
 }
 
+.top-games-actions {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+}
+
 .card-img-wrap.addon {
   background: linear-gradient(180deg, #0f1a2f 0%, #0a1222 100%);
 }

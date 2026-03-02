@@ -17,6 +17,8 @@ let reviewsLoaded = false;
 let hlsPlayer = null;
 let topGamesCache = [];
 let topGamesUpdatedAt = 0;
+let topGamesTotal = 0;
+let topGamesLoading = false;
 
 /* ── DOM refs ──────────────────────────────────────────────── */
 const $ = id => document.getElementById(id);
@@ -54,6 +56,7 @@ function setupLangBtn() {
     btn.querySelector('.lang-label').textContent = i18n.t('lang_switch');
     btn.querySelector('.flag').textContent = next === 'uk' ? '🇺🇦' : '🇬🇧';
     if (topGamesCache.length) renderTopGames(topGamesCache, topGamesUpdatedAt);
+    updateTopGamesMoreBtn();
   });
 }
 
@@ -140,16 +143,54 @@ function showProfileSection() {
 async function loadTopGames() {
   const grid = $('top-games-grid');
   if (!grid) return;
+  topGamesLoading = true;
+  topGamesCache = [];
+  topGamesTotal = 0;
+  updateTopGamesMoreBtn();
   showLoading('top-games-grid');
   try {
-    const data = await api('/api/top-games?limit=20');
+    const data = await api('/api/top-games?limit=20&offset=0');
     topGamesCache = data.games || [];
     topGamesUpdatedAt = data.updated_at || 0;
+    topGamesTotal = data.total || topGamesCache.length;
     renderTopGames(topGamesCache, topGamesUpdatedAt);
   } catch {
     grid.innerHTML = emptyState('media', i18n.t('top_games_empty'));
     $('top-games-count').textContent = '0';
+  } finally {
+    topGamesLoading = false;
+    updateTopGamesMoreBtn();
   }
+}
+
+async function loadMoreTopGames() {
+  if (topGamesLoading) return;
+  if (topGamesTotal && topGamesCache.length >= topGamesTotal) return;
+
+  topGamesLoading = true;
+  updateTopGamesMoreBtn(true);
+  try {
+    const data = await api(`/api/top-games?limit=20&offset=${topGamesCache.length}`);
+    const incoming = data.games || [];
+    topGamesTotal = data.total || topGamesTotal || (topGamesCache.length + incoming.length);
+    topGamesCache = topGamesCache.concat(incoming);
+    renderTopGames(topGamesCache, topGamesUpdatedAt || data.updated_at || 0);
+  } catch {
+    showToast(i18n.t('error_generic'), 'error');
+  } finally {
+    topGamesLoading = false;
+    updateTopGamesMoreBtn();
+  }
+}
+
+function updateTopGamesMoreBtn(forceLoading = false) {
+  const btn = $('top-games-more-btn');
+  if (!btn) return;
+  const loading = forceLoading || topGamesLoading;
+  const hasMore = !topGamesTotal || topGamesCache.length < topGamesTotal;
+  btn.style.display = hasMore ? 'inline-flex' : 'none';
+  btn.disabled = loading;
+  btn.textContent = loading ? `${i18n.t('loading')}` : i18n.t('top_games_load_more');
 }
 
 function renderTopGames(games, updatedAt = 0) {
@@ -159,6 +200,7 @@ function renderTopGames(games, updatedAt = 0) {
     grid.innerHTML = emptyState('media', i18n.t('top_games_empty'));
     $('top-games-count').textContent = '0';
     $('top-games-updated').textContent = i18n.t('top_games_subtitle');
+    updateTopGamesMoreBtn();
     return;
   }
 
@@ -185,6 +227,7 @@ function renderTopGames(games, updatedAt = 0) {
         </div>
       </div>
     </div>`).join('');
+  updateTopGamesMoreBtn();
 }
 
 /* ── Render game cards ─────────────────────────────────────── */
