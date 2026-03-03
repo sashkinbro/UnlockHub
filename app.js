@@ -4,6 +4,7 @@
 
 // ══ CONFIG — update WORKER_URL after deploying to Cloudflare ══
 const WORKER_URL = 'https://achievement.sashabro1997.workers.dev';
+const TRANSLATE_WORKER_URL = 'https://unlockhubtranslateinfo.sashabro1997.workers.dev';
 // ══════════════════════════════════════════════════════════════
 
 /* ── State ─────────────────────────────────────────────────── */
@@ -20,6 +21,8 @@ let achProfileEditMode = !currentProfileUrl;
 let profileEditMode = !currentProfileUrl;
 let profileSynced = !!currentProfileUrl;
 let profileLoading = false;
+const aiTextCache = new Map();
+const aiPending = new Set();
 const ADDON_NAME_RE = /\b(dlc|soundtrack|ost|season pass|expansion pass|expansion|bonus content|redmod|artbook|demo|beta|trial|test server|pts)\b/i;
 const CACHE_TTL_MS = {
   profile: 1000 * 60 * 60 * 6,
@@ -68,6 +71,7 @@ function setupLangBtn() {
     const next = i18n.lang === 'en' ? 'uk' : 'en';
     i18n.setLang(next);
     refreshLangBtn();
+    if (currentGame) renderModal(currentGame);
     if (currentProfileData) renderProfile(currentProfileData);
     renderProfileInputControls();
   });
@@ -327,7 +331,13 @@ function renderModal(g) {
       <!-- OVERVIEW -->
       <div class="tab-panel active" id="tab-overview">
         <div class="overview-grid">
-          <div class="game-description">${sanitizeHtml(g.about || g.description || '')}</div>
+          <div>
+            <div class="ai-tools-row">
+              <button class="btn btn-ghost btn-sm ai-action-btn" onclick="translateGameDescription()">${i18n.t('btn_translate_description')}</button>
+            </div>
+            <div class="game-description" id="game-description">${sanitizeHtml(g.about || g.description || '')}</div>
+            <div class="ai-result-box hidden" id="game-description-ai"></div>
+          </div>
           <div class="overview-sidebar">
             ${pct !== null ? `
             <div class="info-box review-score-box">
@@ -464,7 +474,9 @@ async function loadReviews(appid, cursor = '*') {
         <span class="pill ${pct >= 70 ? 'pill-green' : pct >= 40 ? 'pill-blue' : 'pill-red'}">${pct}% ${i18n.t('reviews_positive')}</span>` : ''}
       </div>`;
 
-    const cards = reviews.map(r => `
+    const cards = reviews.map(r => {
+      const reviewTextEncoded = encodeURIComponent(r.text || '');
+      return `
       <div class="review-card">
         <div class="review-top">
           <div class="review-thumb ${r.positive ? 'pos' : 'neg'}">${r.positive ? '👍' : '👎'}</div>
@@ -476,8 +488,13 @@ async function loadReviews(appid, cursor = '*') {
         <div class="review-text" id="rev-${r.id}" style="display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden">
           ${escHtml(r.text)}
         </div>
+        <div class="ai-tools-row">
+          <button class="btn btn-ghost btn-sm ai-action-btn" onclick="translateReviewText('${appid}','${r.id}','${reviewTextEncoded}')">${i18n.t('btn_translate_review')}</button>
+        </div>
+        <div class="ai-result-box hidden" id="review-ai-${r.id}"></div>
         ${r.text.length > 200 ? `<div class="review-expand" onclick="expandReview('rev-${r.id}',this)">${i18n.t('btn_show_more')}</div>` : ''}
-      </div>`).join('');
+      </div>`;
+    }).join('');
 
     const canLoadMore = data.cursor && data.cursor !== '*' && reviews.length === 10;
     if (cursor === '*') {
@@ -881,6 +898,184 @@ function showToast(msg, type = 'info') {
   setTimeout(() => el.remove(), 3500);
 }
 
+function aiCacheKey(type, payload = {}) {
+  return `${type}:${JSON.stringify(payload)}`;
+}
+
+function aiResultLoading(text = '') {
+  return `
+    <div class="ai-loading">
+      <div class="ai-loading-dot"></div>
+      <div class="ai-loading-lines">
+        <div class="skeleton skeleton-line skeleton-line-md"></div>
+        <div class="skeleton skeleton-line"></div>
+      </div>
+    </div>
+    ${text ? `<div class="ai-loading-caption">${escHtml(text)}</div>` : ''}`;
+}
+
+function showAiLoading(containerId, labelKey = 'ai_loading') {
+  const el = $(containerId);
+  if (!el) return;
+  el.classList.remove('hidden');
+  el.innerHTML = aiResultLoading(i18n.t(labelKey));
+}
+
+function showAiResult(containerId, text) {
+  const el = $(containerId);
+  if (!el) return;
+  el.classList.remove('hidden');
+  el.innerHTML = `<div class="ai-result-text">${escHtml(text || '')}</div>`;
+}
+
+function showAiError(containerId, msg) {
+  const el = $(containerId);
+  if (!el) return;
+  el.classList.remove('hidden');
+  el.innerHTML = `<div class="ai-result-error">${escHtml(msg || i18n.t('error_generic'))}</div>`;
+}
+
+async function translateApi(path, payload, pendingKey) {
+  if (pendingKey && aiPending.has(pendingKey)) return null;
+  if (pendingKey) aiPending.add(pendingKey);
+  try {
+    const res = await fetch(`${TRANSLATE_WORKER_URL}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || res.statusText || 'AI request failed');
+    return data;
+  } finally {
+    if (pendingKey) aiPending.delete(pendingKey);
+  }
+}
+
+function targetLanguageCode() {
+  return i18n.lang === 'uk' ? 'uk' : 'en';
+}
+
+async function translateGameDescription() {
+  if (!currentGame) return;
+  const sourceEl = $('game-description');
+  if (!sourceEl) return;
+  const sourceText = (sourceEl.textContent || '').trim();
+  if (!sourceText) return;
+
+  const payload = {
+    text: sourceText,
+    source_lang: 'auto',
+    target_lang: targetLanguageCode(),
+    content_type: 'game_description',
+    game_name: currentGame.name || '',
+  };
+  const key = aiCacheKey('game_description', payload);
+  const cached = aiTextCache.get(key);
+  if (cached) {
+    showAiResult('game-description-ai', cached);
+    return;
+  }
+
+  showAiLoading('game-description-ai', 'ai_loading_translation');
+  try {
+    const data = await translateApi('/api/translate', payload, key);
+    if (!data?.translated_text) throw new Error('Empty translation');
+    aiTextCache.set(key, data.translated_text);
+    showAiResult('game-description-ai', data.translated_text);
+  } catch {
+    showAiError('game-description-ai', i18n.t('ai_error_translation'));
+  }
+}
+
+async function translateReviewText(appid, reviewId, encodedText) {
+  const text = decodeURIComponent(encodedText || '').trim();
+  if (!text) return;
+  const payload = {
+    text,
+    source_lang: 'auto',
+    target_lang: targetLanguageCode(),
+    content_type: 'review',
+    game_name: currentGame?.name || `App ${appid}`,
+  };
+  const cacheKey = aiCacheKey(`review_${reviewId}`, payload);
+  const containerId = `review-ai-${reviewId}`;
+  const cached = aiTextCache.get(cacheKey);
+  if (cached) {
+    showAiResult(containerId, cached);
+    return;
+  }
+  showAiLoading(containerId, 'ai_loading_translation');
+  try {
+    const data = await translateApi('/api/translate', payload, cacheKey);
+    if (!data?.translated_text) throw new Error('Empty translation');
+    aiTextCache.set(cacheKey, data.translated_text);
+    showAiResult(containerId, data.translated_text);
+  } catch {
+    showAiError(containerId, i18n.t('ai_error_translation'));
+  }
+}
+
+async function translateAchievementText(appid, idx, encodedName, encodedDescription) {
+  const name = decodeURIComponent(encodedName || '').trim();
+  const description = decodeURIComponent(encodedDescription || '').trim();
+  const sourceText = description || name;
+  if (!sourceText) return;
+  const payload = {
+    text: sourceText,
+    source_lang: 'auto',
+    target_lang: targetLanguageCode(),
+    content_type: 'achievement_description',
+    game_name: currentGame?.name || `App ${appid}`,
+    achievement_name: name,
+  };
+  const cacheKey = aiCacheKey(`ach_translation_${idx}`, payload);
+  const containerId = `ach-ai-${idx}`;
+  const cached = aiTextCache.get(cacheKey);
+  if (cached) {
+    showAiResult(containerId, cached);
+    return;
+  }
+  showAiLoading(containerId, 'ai_loading_translation');
+  try {
+    const data = await translateApi('/api/translate', payload, cacheKey);
+    if (!data?.translated_text) throw new Error('Empty translation');
+    aiTextCache.set(cacheKey, data.translated_text);
+    showAiResult(containerId, data.translated_text);
+  } catch {
+    showAiError(containerId, i18n.t('ai_error_translation'));
+  }
+}
+
+async function getAchievementGuide(appid, idx, encodedName, encodedDescription) {
+  const name = decodeURIComponent(encodedName || '').trim();
+  const description = decodeURIComponent(encodedDescription || '').trim();
+  if (!name) return;
+
+  const payload = {
+    game_name: currentGame?.name || `App ${appid}`,
+    achievement_name: name,
+    achievement_description: description,
+    target_lang: targetLanguageCode(),
+  };
+  const cacheKey = aiCacheKey(`ach_guide_${idx}`, payload);
+  const containerId = `ach-ai-${idx}`;
+  const cached = aiTextCache.get(cacheKey);
+  if (cached) {
+    showAiResult(containerId, cached);
+    return;
+  }
+  showAiLoading(containerId, 'ai_loading_guide');
+  try {
+    const data = await translateApi('/api/achievement-guide', payload, cacheKey);
+    if (!data?.guide_text) throw new Error('Empty guide');
+    aiTextCache.set(cacheKey, data.guide_text);
+    showAiResult(containerId, data.guide_text);
+  } catch {
+    showAiError(containerId, i18n.t('ai_error_guide'));
+  }
+}
+
 /* ── API helper ─────────────────────────────────────────────── */
 async function api(path) {
   const res = await fetch(WORKER_URL + path);
@@ -998,13 +1193,20 @@ function renderAchievementsData(body, data, steamid) {
       </div>
     </div>
     <div class="ach-list">
-      ${data.achievements.map(a => `
+      ${data.achievements.map((a, idx) => `
       <div class="ach-item ${a.unlocked ? 'unlocked' : ''}">
         <img class="ach-icon ${a.unlocked ? '' : 'gray'}" src="${a.unlocked ? a.icon : a.icon_gray}" alt="${escHtml(a.displayName)}"
              onerror="this.src='${a.icon}'">
         <div class="ach-info">
           <div class="ach-name">${escHtml(a.displayName)}</div>
           <div class="ach-desc">${a.hidden && !a.unlocked ? (i18n.lang === 'uk' ? 'Приховане досягнення' : 'Hidden achievement') : escHtml(a.description)}</div>
+          <div class="ai-tools-row">
+            <button class="btn btn-ghost btn-sm ai-action-btn"
+              onclick="translateAchievementText('${currentAchAppId}','${idx}','${encodeURIComponent(a.displayName || '')}','${encodeURIComponent(a.description || '')}')">${i18n.t('btn_translate_achievement')}</button>
+            <button class="btn btn-primary btn-sm ai-action-btn"
+              onclick="getAchievementGuide('${currentAchAppId}','${idx}','${encodeURIComponent(a.displayName || '')}','${encodeURIComponent(a.description || '')}')">${i18n.t('btn_achievement_guide')}</button>
+          </div>
+          <div class="ai-result-box hidden" id="ach-ai-${idx}"></div>
         </div>
         <div class="ach-right">
           ${a.unlocked && a.unlock_time ? `<div class="ach-unlock-date">✅ ${new Date(a.unlock_time * 1000).toLocaleDateString()}</div>` :
