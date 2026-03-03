@@ -1053,7 +1053,10 @@ async function getAchievementGuide(appid, idx, encodedName, encodedDescription) 
   if (!name) return;
 
   const payload = {
+    appid: String(appid || ''),
     game_name: currentGame?.name || `App ${appid}`,
+    game_about: String((currentGame?.about || currentGame?.description || '')).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 4000),
+    game_genres: Array.isArray(currentGame?.genres) ? currentGame.genres.slice(0, 8) : [],
     achievement_name: name,
     achievement_description: description,
     target_lang: targetLanguageCode(),
