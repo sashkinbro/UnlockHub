@@ -342,18 +342,6 @@ input {
   gap: 8px;
 }
 
-.top-card-skeleton {
-  width: 165px;
-}
-
-.top-card-skeleton .skeleton-media {
-  aspect-ratio: 2/3;
-}
-
-.top-games-more-skeleton-item {
-  pointer-events: none;
-}
-
 .profile-header-skeleton {
   display: flex;
   align-items: center;
@@ -952,27 +940,6 @@ nav a.active {
   margin-top: 4px;
   color: var(--text-3);
   font-size: 13px;
-}
-
-.top-games-actions {
-  margin-top: 20px;
-  display: flex;
-  justify-content: center;
-}
-
-.top-live-section {
-  padding-top: 22px;
-}
-
-.top-games-grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 20px;
-}
-
-.top-games-grid .game-card {
-  width: 165px;
 }
 
 .card-img-wrap.addon {
@@ -2199,7 +2166,6 @@ nav a.active {
 
 .games-grid>.loading-center,
 .library-grid>.loading-center,
-.top-games-grid>.loading-center,
 #reviews-body>.loading-center,
 #ach-body>.loading-center {
   grid-column: 1 / -1;
@@ -2409,14 +2375,6 @@ footer {
 
   .screenshots-grid {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  }
-
-  .top-games-grid .game-card {
-    width: 154px;
-  }
-
-  .top-card-skeleton {
-    width: 154px;
   }
 
   .header-actions {

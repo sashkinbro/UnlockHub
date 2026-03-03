@@ -16,10 +16,6 @@ let currentAchAppId = '';
 let reviewCursor = '*';
 let reviewsLoaded = false;
 let hlsPlayer = null;
-let topGamesCache = [];
-let topGamesUpdatedAt = 0;
-let topGamesTotal = 0;
-let topGamesLoading = false;
 let suppressVideoErrorToast = false;
 let currentProfileData = null;
 let achProfileEditMode = !currentProfileUrl;
@@ -48,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
   setupVideoModal();
   setupProfileSection();
   prefillHints();
-  loadTopGames();
 });
 
 /* ── Header scroll effect ──────────────────────────────────── */
@@ -74,10 +69,8 @@ function setupLangBtn() {
     const next = i18n.lang === 'en' ? 'uk' : 'en';
     i18n.setLang(next);
     refreshLangBtn();
-    if (topGamesCache.length) renderTopGames(topGamesCache, topGamesUpdatedAt);
     if (currentProfileData) renderProfile(currentProfileData);
     renderProfileInputControls();
-    updateTopGamesMoreBtn();
   });
 }
 
@@ -171,7 +164,6 @@ async function doSearch(query) {
 /* ── Sections ──────────────────────────────────────────────── */
 function showHero() {
   $('hero').classList.remove('hidden');
-  $('top-live-section').classList.remove('hidden');
   $('results-section').classList.add('hidden');
   $('profile-section').classList.add('hidden');
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -179,7 +171,6 @@ function showHero() {
 
 function showResultsSection() {
   $('hero').classList.add('hidden');
-  $('top-live-section').classList.add('hidden');
   $('results-section').classList.remove('hidden');
   $('profile-section').classList.add('hidden');
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -187,143 +178,12 @@ function showResultsSection() {
 
 function showProfileSection() {
   $('hero').classList.add('hidden');
-  $('top-live-section').classList.add('hidden');
   $('results-section').classList.add('hidden');
   $('profile-section').classList.remove('hidden');
   if (currentProfileUrl && !currentProfileData && !profileLoading) {
     loadProfile(currentProfileUrl, { showSection: false });
   }
   window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-async function loadTopGames() {
-  const grid = $('top-games-grid');
-  if (!grid) return;
-  topGamesLoading = true;
-  topGamesCache = [];
-  topGamesTotal = 0;
-  updateTopGamesMoreBtn();
-  showLoading('top-games-grid');
-  try {
-    const data = await api('/api/top-games?limit=25&offset=0');
-    topGamesCache = data.games || [];
-    topGamesUpdatedAt = data.updated_at || 0;
-    topGamesTotal = data.total || topGamesCache.length;
-    renderTopGames(topGamesCache, topGamesUpdatedAt);
-  } catch {
-    grid.innerHTML = emptyState('media', i18n.t('top_games_empty'));
-    $('top-games-count').textContent = '0';
-  } finally {
-    topGamesLoading = false;
-    updateTopGamesMoreBtn();
-  }
-}
-
-async function loadMoreTopGames() {
-  if (topGamesLoading) return;
-  if (topGamesTotal && topGamesCache.length >= topGamesTotal) return;
-
-  const offset = topGamesCache.length;
-  topGamesLoading = true;
-  updateTopGamesMoreBtn(true);
-  showTopGamesMoreSkeleton();
-  try {
-    const data = await api(`/api/top-games?limit=25&offset=${offset}`);
-    const incoming = data.games || [];
-    topGamesTotal = data.total || topGamesTotal || (topGamesCache.length + incoming.length);
-    topGamesUpdatedAt = topGamesUpdatedAt || data.updated_at || 0;
-    clearTopGamesMoreSkeleton();
-
-    if (incoming.length) {
-      topGamesCache = topGamesCache.concat(incoming);
-      appendTopGames(incoming, offset);
-    }
-    updateTopGamesHeader(topGamesCache.length, topGamesUpdatedAt);
-  } catch {
-    clearTopGamesMoreSkeleton();
-    showToast(i18n.t('error_generic'), 'error');
-  } finally {
-    topGamesLoading = false;
-    updateTopGamesMoreBtn();
-  }
-}
-
-function updateTopGamesMoreBtn(forceLoading = false) {
-  const btn = $('top-games-more-btn');
-  if (!btn) return;
-  const loading = forceLoading || topGamesLoading;
-  const hasMore = !topGamesTotal || topGamesCache.length < topGamesTotal;
-  btn.style.display = hasMore ? 'inline-flex' : 'none';
-  btn.disabled = loading;
-  btn.textContent = loading ? `${i18n.t('loading')}` : i18n.t('top_games_load_more');
-}
-
-function renderTopGames(games, updatedAt = 0) {
-  const grid = $('top-games-grid');
-  if (!grid) return;
-  if (!games.length) {
-    grid.innerHTML = emptyState('media', i18n.t('top_games_empty'));
-    updateTopGamesHeader(0, 0);
-    updateTopGamesMoreBtn();
-    return;
-  }
-
-  updateTopGamesHeader(games.length, updatedAt);
-  grid.innerHTML = games.map((g, i) => topGameCardMarkup(g, i)).join('');
-  updateTopGamesMoreBtn();
-}
-
-function topGameCardMarkup(g, i) {
-  const portrait2x = `https://cdn.akamai.steamstatic.com/steam/apps/${g.appid}/library_600x900_2x.jpg`;
-  const portrait = `https://cdn.akamai.steamstatic.com/steam/apps/${g.appid}/library_600x900.jpg`;
-  const secondary = g.fallback2 || g.fallback || `https://steamcdn-a.akamaihd.net/steam/apps/${g.appid}/header.jpg`;
-  return `
-    <div class="game-card" style="animation-delay:${i * 25}ms" onclick="openGameById('${g.appid}')">
-      <div class="card-img-wrap">
-        <img src="${portrait2x}" alt="${escHtml(g.name)}" loading="lazy"
-             data-fallback="${portrait}"
-             data-fallback2="${secondary}"
-             onerror="handleCardImageError(this)">
-        <span class="card-addon">#${g.rank}</span>
-      </div>
-      <div class="card-body">
-        <div class="card-name" title="${escHtml(g.name)}">${escHtml(g.name)}</div>
-        <div class="card-price">
-          <span class="price">${(g.peak_in_game || 0).toLocaleString()}</span>
-          <span class="original" style="text-decoration:none">${i18n.t('top_games_players')}</span>
-        </div>
-      </div>
-    </div>`;
-}
-
-function appendTopGames(games, startIndex = 0) {
-  const grid = $('top-games-grid');
-  if (!grid || !games.length) return;
-  grid.insertAdjacentHTML('beforeend', games.map((g, i) => topGameCardMarkup(g, startIndex + i)).join(''));
-}
-
-function updateTopGamesHeader(count, updatedAt = 0) {
-  $('top-games-count').textContent = String(count || 0);
-  $('top-games-updated').textContent = i18n.t('top_games_subtitle');
-}
-
-function showTopGamesMoreSkeleton(count = 6) {
-  const grid = $('top-games-grid');
-  if (!grid) return;
-  const cards = Array.from({ length: count }, () => `
-    <article class="skeleton-card top-card-skeleton top-games-more-skeleton-item" aria-hidden="true">
-      <div class="skeleton skeleton-media"></div>
-      <div class="skeleton-card-body">
-        <div class="skeleton skeleton-line skeleton-line-lg"></div>
-        <div class="skeleton skeleton-line skeleton-line-sm"></div>
-      </div>
-    </article>`).join('');
-  grid.insertAdjacentHTML('beforeend', cards);
-}
-
-function clearTopGamesMoreSkeleton() {
-  document.querySelectorAll('.top-games-more-skeleton-item').forEach(el => el.remove());
-  updateTopGamesMoreBtn();
 }
 
 /* ── Render game cards ─────────────────────────────────────── */
@@ -1110,10 +970,6 @@ function showLoading(containerId) {
     el.innerHTML = skeletonMarkup('results-grid');
     return;
   }
-  if (containerId === 'top-games-grid') {
-    el.innerHTML = skeletonMarkup('top-games-grid');
-    return;
-  }
   if (containerId === 'library-grid') {
     el.innerHTML = skeletonMarkup('library-grid');
     return;
@@ -1215,17 +1071,6 @@ function skeletonMarkup(type = 'generic') {
         <div class="skeleton-card-body">
           <div class="skeleton skeleton-line skeleton-line-lg"></div>
           <div class="skeleton skeleton-line skeleton-line-md"></div>
-        </div>
-      </article>`).join('');
-  }
-
-  if (type === 'top-games-grid') {
-    return Array.from({ length: 12 }).map(() => `
-      <article class="skeleton-card top-card-skeleton">
-        <div class="skeleton skeleton-media"></div>
-        <div class="skeleton-card-body">
-          <div class="skeleton skeleton-line skeleton-line-lg"></div>
-          <div class="skeleton skeleton-line skeleton-line-sm"></div>
         </div>
       </article>`).join('');
   }
