@@ -1027,7 +1027,7 @@ function skeletonMarkup(type = 'generic') {
   }
 
   if (type === 'library-grid') {
-    return Array.from({ length: 10 }).map(() => `
+    return Array.from({ length: 12 }).map(() => `
       <article class="library-skeleton-card">
         <div class="skeleton skeleton-media"></div>
         <div class="skeleton-card-body">
