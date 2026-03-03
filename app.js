@@ -724,9 +724,10 @@ function renderProfile(d) {
   $('library-grid').innerHTML = d.games.map((g, i) => `
     <div class="lib-card" style="animation-delay:${i * 30}ms" onclick="openGameById('${g.appid}')">
       <div class="lib-card-img">
-        <img src="${g.cover || g.header}" alt="${escHtml(g.name)}" loading="lazy"
-             data-fallback="${g.header || ''}"
-             onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback;return;}this.style.display='none';">
+        <img src="${g.cover || ''}" alt="${escHtml(g.name)}" loading="lazy"
+             data-fallback="${g.cover_fallback || ''}"
+             data-fallback2="${g.cover_fallback2 || ''}"
+             onerror="handleCardImageError(this)">
       </div>
       <div class="lib-card-body">
         <div class="lib-card-name" title="${escHtml(g.name)}">${escHtml(g.name)}</div>
