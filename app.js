@@ -608,7 +608,7 @@ function setupProfileSection() {
     if (syncBtn) {
       const inp = $('profile-url-input');
       const url = inp ? inp.value.trim() : currentProfileUrl;
-      if (url) loadProfile(url);
+      if (url) loadProfile(url, { forceRefresh: true });
     }
   });
 
@@ -617,7 +617,7 @@ function setupProfileSection() {
     const inp = e.target.closest('#profile-url-input');
     if (!inp) return;
     const url = inp.value.trim();
-    if (url) loadProfile(url);
+    if (url) loadProfile(url, { forceRefresh: true });
   });
 }
 
@@ -643,7 +643,7 @@ function renderProfileInputControls() {
 }
 
 async function loadProfile(url, options = {}) {
-  const { showSection = true } = options;
+  const { showSection = true, forceRefresh = false } = options;
   if (showSection) showProfileSection();
   profileLoading = true;
   const normalizedUrl = normalizeProfileUrl(url);
@@ -652,7 +652,10 @@ async function loadProfile(url, options = {}) {
   localStorage.setItem('uh_profile_url', normalizedUrl);
   renderProfileInputControls();
   const profileCacheKey = `uh_cache_profile_${normalizedUrl}`;
-  const cachedProfile = cacheGet(profileCacheKey, CACHE_TTL_MS.profile);
+  if (forceRefresh) {
+    try { localStorage.removeItem(profileCacheKey); } catch { }
+  }
+  const cachedProfile = forceRefresh ? null : cacheGet(profileCacheKey, CACHE_TTL_MS.profile);
 
   if (cachedProfile?.steamid && cachedProfile?.games?.length) {
     currentProfileSteamId = cachedProfile.steamid;
@@ -724,7 +727,7 @@ function renderProfile(d) {
   $('library-grid').innerHTML = d.games.map((g, i) => `
     <div class="lib-card" style="animation-delay:${i * 30}ms" onclick="openGameById('${g.appid}')">
       <div class="lib-card-img">
-        <img src="${g.cover || g.cover_fallback || g.cover_fallback2 || ''}" alt="${escHtml(g.name)}" loading="lazy"
+        <img src="${g.cover || g.cover_fallback || g.cover_fallback2 || 'https://via.placeholder.com/300x450/0d1325/4f8ef7?text=No+Cover'}" alt="${escHtml(g.name)}" loading="lazy"
              data-fallback="${g.cover_fallback || ''}"
              data-fallback2="${g.cover_fallback2 || ''}"
              onerror="handleCardImageError(this)">
