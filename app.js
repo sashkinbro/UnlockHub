@@ -925,7 +925,7 @@ function showAiResult(containerId, text) {
   const el = $(containerId);
   if (!el) return;
   el.classList.remove('hidden');
-  el.innerHTML = `<div class="ai-result-text">${escHtml(text || '')}</div>`;
+  el.innerHTML = `<div class="ai-result-text">${formatAiTextToHtml(text || '')}</div>`;
 }
 
 function showAiError(containerId, msg) {
@@ -933,6 +933,44 @@ function showAiError(containerId, msg) {
   if (!el) return;
   el.classList.remove('hidden');
   el.innerHTML = `<div class="ai-result-error">${escHtml(msg || i18n.t('error_generic'))}</div>`;
+}
+
+function formatAiTextToHtml(raw) {
+  const text = String(raw || '').replace(/\r\n/g, '\n').trim();
+  if (!text) return '';
+
+  const lines = text
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+    .map(line => line
+      .replace(/^#{1,6}\s*/g, '')
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/__(.*?)__/g, '$1')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/^\d+\)\s*/g, '')
+      .replace(/^\d+\.\s*/g, '')
+      .replace(/^\*\s*/g, ''));
+
+  const html = [];
+  let listItems = [];
+  const flushList = () => {
+    if (!listItems.length) return;
+    html.push(`<ul>${listItems.map(x => `<li>${escHtml(x)}</li>`).join('')}</ul>`);
+    listItems = [];
+  };
+
+  for (const line of lines) {
+    const isListLike = /^[-•]\s+/.test(line) || /^(крок|step|план|plan|confidence)\b/i.test(line);
+    if (isListLike) {
+      listItems.push(line.replace(/^[-•]\s+/, ''));
+      continue;
+    }
+    flushList();
+    html.push(`<p>${escHtml(line)}</p>`);
+  }
+  flushList();
+  return html.join('');
 }
 
 async function translateApi(path, payload, pendingKey) {

@@ -1811,10 +1811,24 @@ nav a.active {
 }
 
 .ai-result-text {
-  white-space: pre-wrap;
   line-height: 1.6;
   font-size: 13px;
   color: var(--text-1);
+}
+
+.ai-result-text p {
+  margin: 0 0 8px;
+}
+
+.ai-result-text p:last-child {
+  margin-bottom: 0;
+}
+
+.ai-result-text ul {
+  margin: 0 0 8px 18px;
+  padding: 0;
+  display: grid;
+  gap: 4px;
 }
 
 .ai-result-error {
