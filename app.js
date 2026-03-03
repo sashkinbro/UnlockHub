@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
   setupModalClose();
   setupLightbox();
   setupVideoModal();
+  setupAiActionDelegation();
   setupProfileSection();
   prefillHints();
 });
@@ -333,7 +334,7 @@ function renderModal(g) {
         <div class="overview-grid">
           <div>
             <div class="ai-tools-row">
-              <button class="btn btn-ghost btn-sm ai-action-btn" onclick="translateGameDescription()">${i18n.t('btn_translate_description')}</button>
+              <button class="btn btn-ghost btn-sm ai-action-btn" data-ai-action="translate-description">${i18n.t('btn_translate_description')}</button>
             </div>
             <div class="game-description" id="game-description">${sanitizeHtml(g.about || g.description || '')}</div>
             <div class="ai-result-box hidden" id="game-description-ai"></div>
@@ -410,10 +411,10 @@ function renderModal(g) {
       </div>
     </div>`;
 
+  currentAchAppId = String(g.appid);
   // Auto-load reviews + achievements (global)
   loadReviews(g.appid);
   loadAchievements(g.appid);
-  currentAchAppId = String(g.appid);
 }
 
 function infoRow(label, value) {
@@ -489,7 +490,11 @@ async function loadReviews(appid, cursor = '*') {
           ${escHtml(r.text)}
         </div>
         <div class="ai-tools-row">
-          <button class="btn btn-ghost btn-sm ai-action-btn" onclick="translateReviewText('${appid}','${r.id}','${reviewTextEncoded}')">${i18n.t('btn_translate_review')}</button>
+          <button class="btn btn-ghost btn-sm ai-action-btn"
+            data-ai-action="translate-review"
+            data-appid="${appid}"
+            data-review-id="${r.id}"
+            data-text="${reviewTextEncoded}">${i18n.t('btn_translate_review')}</button>
         </div>
         <div class="ai-result-box hidden" id="review-ai-${r.id}"></div>
         ${r.text.length > 200 ? `<div class="review-expand" onclick="expandReview('rev-${r.id}',this)">${i18n.t('btn_show_more')}</div>` : ''}
@@ -898,6 +903,48 @@ function showToast(msg, type = 'info') {
   setTimeout(() => el.remove(), 3500);
 }
 
+function setupAiActionDelegation() {
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('[data-ai-action]');
+    if (!btn) return;
+    const action = btn.dataset.aiAction;
+    if (!action) return;
+    e.preventDefault();
+    if (btn.disabled) return;
+
+    if (action === 'translate-description') {
+      translateGameDescription();
+      return;
+    }
+
+    if (action === 'translate-review') {
+      const appid = btn.dataset.appid || '';
+      const reviewId = btn.dataset.reviewId || '';
+      const encodedText = btn.dataset.text || '';
+      translateReviewText(appid, reviewId, encodedText);
+      return;
+    }
+
+    if (action === 'translate-achievement') {
+      const appid = btn.dataset.appid || currentAchAppId || '';
+      const idx = btn.dataset.achIndex || '';
+      const name = btn.dataset.achName || '';
+      const desc = btn.dataset.achDesc || '';
+      translateAchievementText(appid, idx, name, desc);
+      return;
+    }
+
+    if (action === 'achievement-guide') {
+      const appid = btn.dataset.appid || currentAchAppId || '';
+      const idx = btn.dataset.achIndex || '';
+      const name = btn.dataset.achName || '';
+      const desc = btn.dataset.achDesc || '';
+      getAchievementGuide(appid, idx, name, desc);
+      return;
+    }
+  });
+}
+
 function aiCacheKey(type, payload = {}) {
   return `${type}:${JSON.stringify(payload)}`;
 }
@@ -1243,9 +1290,17 @@ function renderAchievementsData(body, data, steamid) {
           <div class="ach-desc">${a.hidden && !a.unlocked ? (i18n.lang === 'uk' ? 'Приховане досягнення' : 'Hidden achievement') : escHtml(a.description)}</div>
           <div class="ai-tools-row">
             <button class="btn btn-ghost btn-sm ai-action-btn"
-              onclick="translateAchievementText('${currentAchAppId}','${idx}','${encodeURIComponent(a.displayName || '')}','${encodeURIComponent(a.description || '')}')">${i18n.t('btn_translate_achievement')}</button>
+              data-ai-action="translate-achievement"
+              data-appid="${currentAchAppId}"
+              data-ach-index="${idx}"
+              data-ach-name="${encodeURIComponent(a.displayName || '')}"
+              data-ach-desc="${encodeURIComponent(a.description || '')}">${i18n.t('btn_translate_achievement')}</button>
             <button class="btn btn-primary btn-sm ai-action-btn"
-              onclick="getAchievementGuide('${currentAchAppId}','${idx}','${encodeURIComponent(a.displayName || '')}','${encodeURIComponent(a.description || '')}')">${i18n.t('btn_achievement_guide')}</button>
+              data-ai-action="achievement-guide"
+              data-appid="${currentAchAppId}"
+              data-ach-index="${idx}"
+              data-ach-name="${encodeURIComponent(a.displayName || '')}"
+              data-ach-desc="${encodeURIComponent(a.description || '')}">${i18n.t('btn_achievement_guide')}</button>
           </div>
           <div class="ai-result-box hidden" id="ach-ai-${idx}"></div>
         </div>
