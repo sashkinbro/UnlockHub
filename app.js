@@ -22,6 +22,7 @@ let achProfileEditMode = !currentProfileUrl;
 let profileEditMode = !currentProfileUrl;
 let profileSynced = !!currentProfileUrl;
 let profileLoading = false;
+const ADDON_NAME_RE = /\b(dlc|soundtrack|ost|season pass|expansion pass|expansion|bonus content|redmod|artbook|demo|beta|trial|test server|pts)\b/i;
 const CACHE_TTL_MS = {
   profile: 1000 * 60 * 60 * 6,
   achievements: 1000 * 60 * 20,
@@ -153,12 +154,23 @@ async function doSearch(query) {
 
   try {
     const data = await api(`/api/search?q=${encodeURIComponent(query)}`);
-    renderGameCards(data.results || [], $('results-grid'));
-    $('results-count').textContent = data.results?.length || 0;
+    const rawResults = data.results || [];
+    const gameResults = rawResults.filter(isPrimaryGameResult);
+    renderGameCards(gameResults, $('results-grid'));
+    $('results-count').textContent = gameResults.length;
   } catch (e) {
     showToast(i18n.t('error_generic'), 'error');
     $('results-grid').innerHTML = emptyState('error');
   }
+}
+
+function isPrimaryGameResult(game = {}) {
+  if (game.is_main_game === false) return false;
+  const type = String(game.type || '').toLowerCase();
+  if (type && type !== 'app' && type !== 'game') return false;
+  const name = String(game.name || '');
+  if (ADDON_NAME_RE.test(name)) return false;
+  return true;
 }
 
 /* ── Sections ──────────────────────────────────────────────── */
@@ -257,6 +269,8 @@ function showModalLoading() {
 }
 
 function renderModal(g) {
+  const heroScreenshot = screenshots[0]?.full || screenshots[0]?.thumb || g.background || g.header;
+  const heroFallback = g.background || g.header || '';
   const pct = g.review_summary?.total_reviews
     ? Math.round(g.review_summary.total_positive / g.review_summary.total_reviews * 100) : null;
   const scoreClass = pct >= 70 ? 'pos' : pct >= 40 ? 'mix' : 'neg';
@@ -283,8 +297,9 @@ function renderModal(g) {
 
   $('modal-box').innerHTML = `
     <div class="modal-hero">
-      <img class="modal-hero-img" src="${g.background || g.header}" alt="${escHtml(g.name)}"
-           onerror="this.src='${g.header}'">
+      <img class="modal-hero-img" src="${heroScreenshot}" alt="${escHtml(g.name)}"
+           data-fallback="${heroFallback}"
+           onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback;return;}this.onerror=null;">
       <button class="modal-close" onclick="closeModal()" aria-label="Close">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
