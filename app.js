@@ -724,7 +724,7 @@ function renderProfile(d) {
   $('library-grid').innerHTML = d.games.map((g, i) => `
     <div class="lib-card" style="animation-delay:${i * 30}ms" onclick="openGameById('${g.appid}')">
       <div class="lib-card-img">
-        <img src="${g.cover || ''}" alt="${escHtml(g.name)}" loading="lazy"
+        <img src="${g.cover || g.cover_fallback || g.cover_fallback2 || ''}" alt="${escHtml(g.name)}" loading="lazy"
              data-fallback="${g.cover_fallback || ''}"
              data-fallback2="${g.cover_fallback2 || ''}"
              onerror="handleCardImageError(this)">
