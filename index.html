@@ -196,10 +196,14 @@
 
     <!-- ══ VIDEO MODAL ══════════════════════════════════════════ -->
     <div id="video-modal" class="video-modal hidden" role="dialog" aria-modal="true" aria-label="Video player">
-        <video id="video-player" controls preload="none" playsinline
-            style="max-width:92vw;max-height:80vh;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,0.7)">
-            Your browser doesn't support HTML5 video.
-        </video>
+        <div class="video-player-shell">
+            <iframe id="video-player-yt" title="YouTube video player"
+                src=""
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerpolicy="strict-origin-when-cross-origin"
+                allowfullscreen></iframe>
+        </div>
         <div class="video-modal-title" id="video-modal-title"></div>
         <button class="video-modal-close" id="video-modal-close" aria-label="Close">✕</button>
     </div>

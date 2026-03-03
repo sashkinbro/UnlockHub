@@ -15,8 +15,6 @@ let currentProfileUrl = localStorage.getItem('uh_profile_url') || '';
 let currentAchAppId = '';
 let reviewCursor = '*';
 let reviewsLoaded = false;
-let hlsPlayer = null;
-let suppressVideoErrorToast = false;
 let currentProfileData = null;
 let achProfileEditMode = !currentProfileUrl;
 let profileEditMode = !currentProfileUrl;
@@ -274,11 +272,11 @@ function renderModal(g) {
   const pct = g.review_summary?.total_reviews
     ? Math.round(g.review_summary.total_positive / g.review_summary.total_reviews * 100) : null;
   const scoreClass = pct >= 70 ? 'pos' : pct >= 40 ? 'mix' : 'neg';
-  const moviesWithUrl = (g.movies || []).map(m => {
-    const videoUrl = m.mp4_max || m.mp4_480 || m.hls_h264 || m.webm_max || m.webm_480 || '';
-    const streamType = m.hls_h264 ? 'hls' : (videoUrl.includes('.m3u8') ? 'hls' : 'file');
-    return { ...m, videoUrl, streamType };
-  }).filter(m => m.videoUrl);
+  const igdbVideos = (g.movies || []).map(m => ({
+    name: m.name || 'Trailer',
+    youtubeId: String(m.youtube_id || m.video_id || '').trim(),
+    thumb: m.thumb || '',
+  })).filter(m => /^[A-Za-z0-9_-]{6,}$/.test(m.youtubeId));
 
   const showAchInput = achProfileEditMode || !currentProfileUrl;
   const achProfileBar = showAchInput
@@ -369,14 +367,13 @@ function renderModal(g) {
 
       <!-- VIDEOS -->
       <div class="tab-panel" id="tab-videos">
-        ${moviesWithUrl.length ? `
+        ${igdbVideos.length ? `
         <div class="videos-grid">
-          ${moviesWithUrl.map(m => {
-        const encodedUrl = encodeURIComponent(m.videoUrl);
+          ${igdbVideos.map(m => {
+        const encodedId = encodeURIComponent(m.youtubeId);
         const encodedName = encodeURIComponent(m.name || 'Trailer');
-        const encodedType = encodeURIComponent(m.streamType || 'file');
         return `
-            <div class="video-item" onclick="openVideoByEncoded('${encodedUrl}','${encodedName}','${encodedType}')">
+            <div class="video-item" onclick="openYouTubeByEncoded('${encodedId}','${encodedName}')">
               <img src="${m.thumb}" alt="${escHtml(m.name)}" loading="lazy">
               <div class="video-play-btn">
                 <svg viewBox="0 0 80 80" fill="none"><circle cx="40" cy="40" r="39" stroke="white" stroke-opacity="0.3" stroke-width="2"/><circle cx="40" cy="40" r="39" fill="rgba(79,142,247,0.2)"/><path d="M33 28l22 12-22 12V28z" fill="white"/></svg>
@@ -727,8 +724,9 @@ function renderProfile(d) {
   $('library-grid').innerHTML = d.games.map((g, i) => `
     <div class="lib-card" style="animation-delay:${i * 30}ms" onclick="openGameById('${g.appid}')">
       <div class="lib-card-img">
-        <img src="${g.header}" alt="${escHtml(g.name)}" loading="lazy"
-             onerror="this.style.display='none'">
+        <img src="${g.cover || g.header}" alt="${escHtml(g.name)}" loading="lazy"
+             data-fallback="${g.header || ''}"
+             onerror="if(this.dataset.fallback&&this.src!==this.dataset.fallback){this.src=this.dataset.fallback;return;}this.style.display='none';">
       </div>
       <div class="lib-card-body">
         <div class="lib-card-name" title="${escHtml(g.name)}">${escHtml(g.name)}</div>
@@ -795,97 +793,31 @@ function updateLightbox() {
 function setupVideoModal() {
   $('video-modal-close').addEventListener('click', closeVideoModal);
   $('video-modal').addEventListener('click', e => { if (e.target === $('video-modal')) closeVideoModal(); });
-  const player = $('video-player');
-  player.addEventListener('error', () => {
-    if (suppressVideoErrorToast) return;
-    showToast(i18n.lang === 'uk' ? 'Не вдалося завантажити відео' : 'Failed to load video', 'error');
-  });
 }
 
-function openVideoByEncoded(encodedUrl, encodedName, encodedType = 'file') {
+function openYouTubeByEncoded(encodedVideoId, encodedName) {
   try {
-    openVideo(decodeURIComponent(encodedUrl), decodeURIComponent(encodedName), decodeURIComponent(encodedType || 'file'));
+    openYouTubeVideo(decodeURIComponent(encodedVideoId), decodeURIComponent(encodedName));
   } catch {
-    openVideo(encodedUrl, encodedName, 'file');
+    openYouTubeVideo(encodedVideoId, encodedName);
   }
 }
 
-function ensureHlsScript() {
-  return new Promise((resolve, reject) => {
-    if (window.Hls) return resolve(window.Hls);
-    const existing = document.querySelector('script[data-hlsjs="1"]');
-    if (existing) {
-      existing.addEventListener('load', () => resolve(window.Hls));
-      existing.addEventListener('error', reject);
-      return;
-    }
-    const s = document.createElement('script');
-    s.src = 'https://cdn.jsdelivr.net/npm/hls.js@1.5.20/dist/hls.min.js';
-    s.async = true;
-    s.dataset.hlsjs = '1';
-    s.onload = () => resolve(window.Hls);
-    s.onerror = reject;
-    document.head.appendChild(s);
-  });
-}
-
-function destroyHlsPlayer() {
-  if (hlsPlayer) {
-    try { hlsPlayer.destroy(); } catch { }
-    hlsPlayer = null;
-  }
-}
-
-async function openVideo(url, name, streamType = 'file') {
-  if (!url) return;
-  suppressVideoErrorToast = false;
-  const player = $('video-player');
-  destroyHlsPlayer();
-  player.pause();
-  player.removeAttribute('src');
-  player.load();
-
-  if (streamType === 'hls' || /\.m3u8(\?|$)/i.test(url)) {
-    try {
-      await ensureHlsScript();
-      if (window.Hls && window.Hls.isSupported()) {
-        hlsPlayer = new window.Hls();
-        hlsPlayer.loadSource(url);
-        hlsPlayer.attachMedia(player);
-        hlsPlayer.on(window.Hls.Events.MANIFEST_PARSED, () => {
-          player.play().catch(() => { });
-        });
-      } else {
-        player.src = url;
-        player.load();
-        player.play().catch(() => { });
-      }
-    } catch {
-      player.src = url;
-      player.load();
-      player.play().catch(() => { });
-    }
-  } else {
-    player.crossOrigin = 'anonymous';
-    player.src = url;
-    player.load();
-    player.play().catch(() => { });
-  }
-
+function openYouTubeVideo(videoId, name) {
+  if (!/^[A-Za-z0-9_-]{6,}$/.test(String(videoId || ''))) return;
+  const frame = $('video-player-yt');
+  if (!frame) return;
+  frame.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
   $('video-modal-title').textContent = name;
   $('video-modal').classList.remove('hidden');
   document.body.style.overflow = 'hidden';
 }
 
 function closeVideoModal() {
-  const player = $('video-player');
-  suppressVideoErrorToast = true;
-  destroyHlsPlayer();
-  player.pause();
-  player.src = '';
+  const frame = $('video-player-yt');
+  if (frame) frame.src = '';
   $('video-modal').classList.add('hidden');
   document.body.style.overflow = '';
-  setTimeout(() => { suppressVideoErrorToast = false; }, 300);
 }
 
 /* ── Particles ──────────────────────────────────────────────── */

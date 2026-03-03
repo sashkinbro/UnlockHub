@@ -2061,14 +2061,22 @@ nav a.active {
   display: none;
 }
 
-.video-modal video,
-.video-modal iframe {
-  max-width: 92vw;
-  max-height: 80vh;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-lg);
+.video-player-shell {
+  width: min(1100px, 92vw);
+  aspect-ratio: 16 / 9;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.65);
   background: #000;
-  width: min(900px, 92vw);
+}
+
+.video-player-shell iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #000;
 }
 
 .video-modal-title {
@@ -2510,11 +2518,9 @@ footer {
     height: 40px;
   }
 
-  .video-modal video,
-  .video-modal iframe {
+  .video-player-shell {
     width: 100vw;
     max-width: 100vw;
-    max-height: 60vh;
     border-radius: 0;
   }
 
